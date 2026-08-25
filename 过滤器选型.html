@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>过滤器选型</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    min-height: 100vh;
+}
+.header {
+    background: linear-gradient(135deg, #1a73e8, #1557b0);
+    color: #fff;
+    padding: 12px 24px;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.header .sub {
+    font-size: 13px;
+    opacity: 0.8;
+    font-weight: 400;
+    margin-left: auto;
+}
+.container {
+    max-width: 1200px;
+    margin: 12px auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+}
+.panel {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 16px;
+}
+.panel h2 {
+    font-size: 15px;
+    color: #1a73e8;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8f0fe;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.panel h2 .icon { font-size: 18px; }
+.form-group {
+    margin-bottom: 10px;
+}
+.form-group label {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #333;
+    background: #fafafa;
+    cursor: pointer;
+    transition: all .2s;
+    appearance: auto;
+}
+.form-group select:hover { border-color: #1a73e8; }
+.form-group select:focus {
+    outline: none;
+    border-color: #1a73e8;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(26,115,232,0.1);
+}
+.result-card {
+    background: #f8fafd;
+    border: 1px solid #e8edf2;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 0;
+    min-width: 0;
+    min-height: 92px;
+    box-sizing: border-box;
+}
+.result-card .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+    line-height: 20px;
+}
+.result-card .card-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    line-height: 20px;
+}
+.result-card .card-detail {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-top: 4px;
+    line-height: 20px;
+}
+.result-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 13px;
+}
+.result-row.frame-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 8px;
+}
+.arrangement-section {
+    margin-bottom: 10px;
+}
+.arrangement-section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.arrangement-section h3 .badge {
+    background: #e8f0fe;
+    color: #1a73e8;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+.visual-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+.block {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #4a90d9, #357abd);
+    color: #fff;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 14px;
+    min-width: 36px;
+    transition: all .2s;
+    position: relative;
+}
+.block.small  { height: 28px; padding: 0 6px; }
+.block.medium { height: 38px; padding: 0 8px; font-size: 16px; }
+.block.large  { height: 48px; padding: 0 10px; font-size: 18px; }
+.block:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74,144,217,0.4);
+}
+.block-sum {
+    font-size: 13px;
+    color: #888;
+    margin-left: 12px;
+    white-space: nowrap;
+}
+.plus-sign {
+    font-size: 18px;
+    color: #bbb;
+    font-weight: 300;
+}
+.empty-state {
+    color: #bbb;
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
+}
+.warning {
+    background: #fff3e0;
+    border: 1px solid #ffcc80;
+    color: #e65100;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 8px;
+}
+.info-tip {
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    color: #2e7d32;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 8px;
+}
+.divider {
+    border: none;
+    border-top: 1px dashed #e0e0e0;
+    margin: 10px 0;
+}
+/* 数据编辑按钮 */
+.btn-edit {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-left: 16px;
+    transition: all .2s;
+}
+.btn-edit:hover { background: rgba(255,255,255,0.35); }
+/* 模态窗口 */
+.modal-overlay {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); z-index: 1000;
+    justify-content: center; align-items: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+    background: #fff; border-radius: 12px;
+    width: 90%; max-width: 900px; max-height: 85vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-header {
+    padding: 18px 24px; border-bottom: 1px solid #eee;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+}
+.modal-header h3 { font-size: 17px; color: #1a73e8; }
+.modal-close {
+    background: none; border: none; font-size: 24px;
+    color: #999; cursor: pointer; padding: 0 4px;
+}
+.modal-close:hover { color: #333; }
+.modal-tabs {
+    display: flex; border-bottom: 2px solid #eee;
+    padding: 0 24px; flex-shrink: 0;
+}
+.modal-tab {
+    padding: 10px 20px; cursor: pointer;
+    font-size: 14px; color: #888; border-bottom: 2px solid transparent;
+    margin-bottom: -2px; transition: all .2s;
+}
+.modal-tab:hover { color: #1a73e8; }
+.modal-tab.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+.modal-body {
+    flex: 1; overflow-y: auto; padding: 16px 20px;
+}
+.modal-footer {
+    padding: 14px 24px; border-top: 1px solid #eee;
+    display: flex; gap: 10px; justify-content: flex-end;
+    flex-shrink: 0;
+}
+.btn { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; transition: all .2s; }
+.btn-primary { background: #1a73e8; color: #fff; }
+.btn-primary:hover { background: #1557b0; }
+.btn-outline { background: #fff; color: #666; border: 1px solid #ddd; }
+.btn-outline:hover { background: #f5f5f5; }
+.btn-danger { background: #fff; color: #e53935; border: 1px solid #ef9a9a; }
+.btn-danger:hover { background: #ffebee; }
+/* 数据编辑表格 */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th {
+    background: #f5f7fa; padding: 8px 10px;
+    text-align: left; font-weight: 600; color: #555;
+    border-bottom: 2px solid #e0e0e0; white-space: nowrap;
+    position: sticky; top: 0; z-index: 1;
+}
+.data-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+.data-table tr:hover td { background: #fafbfc; }
+.data-table input {
+    width: 60px; padding: 4px 6px; border: 1px solid #ddd;
+    border-radius: 4px; font-size: 13px; text-align: center;
+}
+.data-table input:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.1); }
+.data-table input.wide { width: 200px; text-align: left; }
+.data-table .tag {
+    display: inline-block; background: #e8f0fe; color: #1a73e8;
+    padding: 1px 7px; border-radius: 10px; font-size: 11px;
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.arr-input-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.arr-input-row input { width: 44px; }
+.arr-input-row .sep { color: #bbb; font-size: 14px; }
+/* 模式切换 */
+.mode-toggle {
+    display: flex; background: #e8edf2; border-radius: 8px; padding: 3px; margin-bottom: 18px;
+}
+.mode-toggle button {
+    flex: 1; padding: 8px 0; border: none; cursor: pointer;
+    border-radius: 6px; font-size: 13px; font-weight: 500;
+    background: transparent; color: #666; transition: all .2s;
+}
+.mode-toggle button.active { background: #fff; color: #1a73e8; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+/* 过滤器规格 */
+.spec-tag {
+    display: inline-block;
+    background: #eff6ff;
+    color: #2563eb;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+}
+.spec-line {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    word-break: break-all;
+    line-height: 2;
+}
+</style>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div class="header">
+    <span>&#9881;</span> 过滤器选型
+    <button class="btn-edit" onclick="openDataEditor()">&#9881; 数据编辑</button>
+</div>
+
+<div class="container">
+    <!-- 左侧：输入区 -->
+    <div class="panel" style="position: sticky; top: 20px; align-self: start;">
+        <h2><span class="icon">&#128269;</span> 选型参数</h2>
+
+        <div class="mode-toggle">
+            <button class="active" onclick="switchMode('pull', this)">抽拉过滤</button>
+            <button onclick="switchMode('frame', this)">框架过滤</button>
+        </div>
+
+        <div class="form-group">
+            <label>过滤器类型</label>
+            <select id="filterType" onchange="updateAll()">
+                <option value="g2_20">初效板式G系列 (厚度20mm)</option>
+                <option value="g3_46">初效板式G系列 (厚度46mm)</option>
+                <option value="f_300">中效袋式F系列 (袋长300mm)</option>
+                <option value="f_500">中效袋式F系列 (袋长500mm)</option>
+                <option value="gf_300">初效G + 中效F (袋长300mm)</option>
+                <option value="gf_500">初效G + 中效F (袋长500mm)</option>
+                <option value="h">高效过滤H系列 (厚度292mm)</option>
+                <option value="carbon">活性炭过滤器TANH36 (厚度292mm)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>宽度模数 (箱体宽度 M)</label>
+            <select id="widthModule" onchange="updateAll()"></select>
+        </div>
+
+        <div class="form-group">
+            <label>高度模数 (箱体高度 M)</label>
+            <select id="heightModule" onchange="updateAll()"></select>
+        </div>
+
+        <div class="form-group">
+            <label>前方功能段是否有4M以上检修门</label>
+            <select id="hasFrontDoor" onchange="updateAll()">
+                <option value="no">否</option>
+                <option value="yes">是</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>检修门类型</label>
+            <select id="doorTypeSelect" onchange="onDoorTypeChange(this.value)" disabled>
+                <option value="pull">拆卸门</option>
+                <option value="hinge">铰链门</option>
+            </select>
+        </div>
+
+        <div id="inputTips"></div>
+    </div>
+
+    <!-- 右侧：结果区 -->
+    <div class="panel" id="resultPanel">
+        <h2><span class="icon">&#128203;</span> 选型结果</h2>
+
+        <!-- 段长 & 检修门 -->
+        <div class="result-row" id="resultRow">
+            <div class="result-card" id="card1">
+                <div class="card-title" id="cardTitle1">段长</div>
+                <div class="card-value" id="resLength">--</div>
+                <div class="card-detail" id="resLengthM"></div>
+            </div>
+            <div class="result-card" id="card2">
+                <div class="card-title" id="cardTitle2">检修门</div>
+                <div class="card-value" id="resDoor">--</div>
+                <div class="card-detail" id="resDoorDetail"></div>
+            </div>
+            <div class="result-card" id="card3" style="display:none;">
+                <div class="card-title">过滤段长（模数）</div>
+                <div class="card-value" id="resFilterLength">--</div>
+                <div class="card-detail" id="resFilterLengthM"></div>
+            </div>
+        </div>
+
+        <!-- 宽度方向排布 -->
+        <div class="arrangement-section">
+            <h3>&#8596; 宽度方向过滤器排布 <span class="badge" id="widthBadge"></span></h3>
+            <div id="widthVisual"></div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 高度方向排布 -->
+        <div class="arrangement-section">
+            <h3>&#8597; 高度方向过滤器排布 <span class="badge" id="heightBadge"></span></h3>
+            <div id="heightVisual"></div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 过滤器规格 -->
+        <div class="arrangement-section">
+            <h3>&#9883; 过滤器规格 <span class="badge" id="specCountBadge"></span></h3>
+            <div id="filterSpecs" class="spec-line"></div>
+            <div id="filterSpecGrid"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据编辑模态窗口 -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeDataEditor()">
+<div class="modal">
+<div class="modal-header">
+    <h3>&#9881; 基础数据编辑</h3>
+    <button class="modal-close" onclick="closeDataEditor()">&times;</button>
+</div>
+<div class="modal-tabs">
+    <div class="modal-tab active" onclick="switchTab('filter')">过滤器类型</div>
+    <div class="modal-tab" onclick="switchTab('door')">检修门</div>
+    <div class="modal-tab" onclick="switchTab('width')">宽度排布</div>
+    <div class="modal-tab" onclick="switchTab('height')">高度排布</div>
+</div>
+<div class="modal-body">
+    <!-- 过滤器类型（双模式） -->
+    <div class="tab-content active" id="tab-filter">
+        <table class="data-table">
+            <thead><tr>
+                                <th>标识</th><th>过滤形式</th><th>过滤器名称</th><th>模数(M)</th><th>检修段长(M)</th>
+            </tr></thead>
+            <tbody id="tblFilter"></tbody>
+        </table>
+    </div>
+    <!-- 检修门（双模式） -->
+    <div class="tab-content" id="tab-door">
+        <table class="data-table">
+            <thead><tr><th>标识</th><th>过滤器名称</th><th>抽拉X</th><th>抽拉Y</th><th>框架X</th><th>框架Y</th></tr></thead>
+            <tbody id="tblDoor"></tbody>
+        </table>
+    </div>
+    <!-- 宽度排布（双模式） -->
+    <div class="tab-content" id="tab-width">
+        <table class="data-table">
+            <thead><tr><th>宽度模数</th><th>抽拉组合</th><th>框架组合</th></tr></thead>
+            <tbody id="tblWidth"></tbody>
+        </table>
+    </div>
+    <!-- 高度排布（双模式） -->
+    <div class="tab-content" id="tab-height">
+        <table class="data-table">
+            <thead><tr><th>高度模数</th><th>抽拉组合</th><th>框架组合</th></tr></thead>
+            <tbody id="tblHeight"></tbody>
+        </table>
+    </div>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-danger" onclick="resetDefaults()">&#8634; 恢复默认</button>
+    <button class="btn btn-outline" onclick="exportData()">&#8615; 导出</button>
+    <label class="btn btn-outline" style="cursor:pointer;margin:0;">&#8614; 导入<input type="file" accept=".xlsx,.xls" onchange="importData(this)" style="display:none;"></label>
+    <button class="btn btn-outline" onclick="closeDataEditor()">取消</button>
+    <button class="btn btn-primary" onclick="applyEdits()">&#10003; 应用并保存</button>
+</div>
+</div></div>
+
+<script>
+// ===== 默认数据（不可变，用于重置） =====
+const DEFAULT_DATA = {
+    sectionLength: {
+        'g2_20':   { mm: 400, M: 4,  name: '初效板式G系列(20mm)' },
+        'g3_46':   { mm: 400, M: 4,  name: '初效板式G系列(46mm)' },
+        'f_300':   { mm: 500, M: 5,  name: '中效袋式F系列(袋长300mm)' },
+        'f_500':   { mm: 700, M: 7,  name: '中效袋式F系列(袋长500mm)' },
+        'gf_300':  { mm: 500, M: 5,  name: '初效G+中效F(袋长300mm)' },
+        'gf_500':  { mm: 700, M: 7,  name: '初效G+中效F(袋长500mm)' },
+        'h':       { mm: 600, M: 6,  name: '高效过滤H系列(292mm)' },
+        'carbon':  { mm: 600, M: 6,  name: '活性炭过滤器TANH36(292mm)' },
+    },
+    doorOffset: {
+        'g2_20':  { x: 746, y: 292 }, 'g3_46':  { x: 746, y: 292 },
+        'f_300':  { x: 646, y: 292 }, 'f_500':  { x: 646, y: 292 },
+        'gf_300': { x: 646, y: 292 }, 'gf_500': { x: 646, y: 292 },
+        'h':      { x: 546, y: 292 }, 'carbon': { x: 546, y: 292 },
+    },
+    widthArr: {
+        6:[6],7:[3,4],8:[4,4],9:[4,5],10:[5,5],11:[5,6],12:[6,6],13:[4,4,5],14:[4,5,5],
+        15:[5,5,5],16:[5,5,6],17:[5,6,6],18:[6,6,6],19:[4,5,5,5],20:[5,5,5,5],
+        21:[5,5,5,6],22:[5,5,6,6],23:[5,6,6,6],24:[6,6,6,6],25:[5,5,5,5,5],
+        26:[5,5,5,5,6],27:[5,5,5,6,6],28:[5,5,6,6,6],29:[5,6,6,6,6],30:[6,6,6,6,6],
+        31:[5,5,5,5,5,6],32:[5,5,5,5,6,6],33:[5,5,5,6,6,6],
+    },
+    heightArr: {
+        6:[4],7:[5],8:[6],9:[3,4],10:[4,4],11:[3,6],12:[4,6],13:[5,6],14:[6,6],
+        15:[3,5,5],16:[4,5,5],17:[5,5,5],18:[5,5,6],19:[5,6,6],20:[6,6,6],
+        21:[4,4,5,5],22:[4,5,5,5],23:[5,5,5,5],24:[5,5,5,6],25:[5,5,6,6],
+        26:[5,6,6,6],27:[6,6,6,6],28:[5,5,5,5,5],29:[5,5,5,5,6],30:[5,5,5,6,6],
+        31:[5,5,6,6,6],32:[5,6,6,6,6],33:[6,6,6,6,6],
+    },
+    // 框架过滤 (6.3)
+    frameSectionLength: {
+        'g2_20':   { mm: 150, M: 1.5, serviceMm: 600, serviceM: 6, name: '初效板式G系列(20mm)' },
+        'g3_46':   { mm: 150, M: 1.5, serviceMm: 600, serviceM: 6, name: '初效板式G系列(46mm)' },
+        'f_300':   { mm: 350, M: 3.5, serviceMm: 600, serviceM: 6, name: '中效袋式F系列(袋长300mm)' },
+        'f_500':   { mm: 550, M: 5.5, serviceMm: 600, serviceM: 6, name: '中效袋式F系列(袋长500mm)' },
+        'gf_300':  { mm: 400, M: 4,   serviceMm: 600, serviceM: 6, name: '初效G+中效F(袋长300mm)' },
+        'gf_500':  { mm: 600, M: 6,   serviceMm: 600, serviceM: 6, name: '初效G+中效F(袋长500mm)' },
+        'h':       { mm: 400, M: 4,   serviceMm: 600, serviceM: 6, name: '高效过滤H系列(292mm)' },
+        'carbon':  { mm: 400, M: 4,   serviceMm: 600, serviceM: 6, name: '活性炭过滤器TANH36(292mm)' },
+    },
+    frameDoorOffset: {
+        'g2_20':  { x: 550, y: 292 }, 'g3_46':  { x: 550, y: 292 },
+        'f_300':  { x: 550, y: 292 }, 'f_500':  { x: 550, y: 292 },
+        'gf_300': { x: 550, y: 292 }, 'gf_500': { x: 550, y: 292 },
+        'h':      { x: 550, y: 292 }, 'carbon': { x: 550, y: 292 },
+    },
+    frameWidthArr: {
+        6:[5],7:[6],8:[4,3],9:[4,4],10:[5,4],11:[5,5],12:[5,6],13:[6,6],14:[5,4,4],
+        15:[5,5,4],16:[5,5,5],17:[5,5,6],18:[6,6,5],19:[6,6,6],20:[5,5,5,4],
+        21:[5,5,5,5],22:[5,5,5,6],23:[5,5,6,6],24:[5,6,6,6],25:[6,6,6,6],
+        26:[5,5,5,5,5],27:[5,5,5,5,6],28:[5,5,5,6,6],29:[5,5,5,6,6],30:[5,5,6,6,6],
+        31:[5,6,6,6,6],32:[6,6,6,6,6],33:[5,5,5,5,5,6],
+    },
+    frameHeightArr: {
+        6:[4],7:[3,3],8:[4,3],9:[4,4],10:[5,4],11:[5,5],12:[5,6],13:[6,6],14:[5,4,4],
+        15:[5,5,4],16:[5,5,5],17:[5,5,6],18:[5,6,6],19:[6,6,6],20:[5,5,5,4],
+        21:[5,5,5,5],22:[5,5,5,6],23:[5,5,6,6],24:[5,6,6,6],25:[6,6,6,6],
+        26:[6,6,6,6],27:[5,5,5,5,6],28:[5,5,5,6,6],29:[5,5,6,6,6],30:[5,5,6,6,6],
+        31:[6,6,6,6,6],32:[6,6,6,6,6],33:[5,5,5,5,5,6],
+    }
+};
+
+// ===== 运行时数据（可编辑） =====
+let sectionLengthData, doorOffsetData, widthArrangement, heightArrangement;
+
+// ===== 编辑器数据（同时持有抽拉+框架两套，用于数据编辑窗口） =====
+let editorPullSL, editorPullDO, editorPullWA, editorPullHA;
+let editorFrameSL, editorFrameDO, editorFrameWA, editorFrameHA;
+
+function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+function loadData() {
+    var key = (currentMode === 'frame') ? 'frameFilter_data' : 'pullFilter_data';
+    var saved = localStorage.getItem(key);
+    var defS = (currentMode === 'frame') ? 'frameSectionLength' : 'sectionLength';
+    var defD = (currentMode === 'frame') ? 'frameDoorOffset' : 'doorOffset';
+    var defW = (currentMode === 'frame') ? 'frameWidthArr' : 'widthArr';
+    var defH = (currentMode === 'frame') ? 'frameHeightArr' : 'heightArr';
+    if (saved) {
+        try {
+            var d = JSON.parse(saved);
+            sectionLengthData = d.sectionLength || deepClone(DEFAULT_DATA[defS]);
+            doorOffsetData     = d.doorOffset     || deepClone(DEFAULT_DATA[defD]);
+            widthArrangement  = d.widthArr      || deepClone(DEFAULT_DATA[defW]);
+            heightArrangement = d.heightArr     || deepClone(DEFAULT_DATA[defH]);
+        } catch(e) { loadDefaults(); }
+    } else { loadDefaults(); }
+    // 确保 mm 与 M 一致
+    deriveMm(sectionLengthData);
+}
+
+function loadDefaults() {
+    sectionLengthData = deepClone(DEFAULT_DATA[(currentMode === 'frame') ? 'frameSectionLength' : 'sectionLength']);
+    doorOffsetData     = deepClone(DEFAULT_DATA[(currentMode === 'frame') ? 'frameDoorOffset' : 'doorOffset']);
+    widthArrangement  = deepClone(DEFAULT_DATA[(currentMode === 'frame') ? 'frameWidthArr' : 'widthArr']);
+    heightArrangement = deepClone(DEFAULT_DATA[(currentMode === 'frame') ? 'frameHeightArr' : 'heightArr']);
+    deriveMm(sectionLengthData);
+}
+
+function saveDataToStorage() {
+    var key = (currentMode === 'frame') ? 'frameFilter_data' : 'pullFilter_data';
+    localStorage.setItem(key, JSON.stringify({
+        sectionLength: sectionLengthData,
+        doorOffset: doorOffsetData,
+        widthArr: widthArrangement,
+        heightArr: heightArrangement
+    }));
+}
+
+// ===== 工具函数 =====
+function doorClearWidth(doorW) { return doorW - (currentMode === 'frame' && frameDoorType === 'hinge' ? 100 : 30); }
+const FILTER_KEYS = ['g2_20','g3_46','f_300','f_500','gf_300','gf_500','h','carbon'];
+
+// ===== 模数→mm 自动推导 =====
+// mm = M * 100 (1M = 100mm)，同时推导 serviceMm = serviceM * 100
+function deriveMm(sl) {
+    FILTER_KEYS.forEach(function(key){
+        if (sl[key]) {
+            sl[key].mm = Math.round(sl[key].M * 100);
+            if (sl[key].serviceM != null) {
+                sl[key].serviceMm = Math.round(sl[key].serviceM * 100);
+            }
+        }
+    });
+}
+
+// ===== 模态窗口 =====
+function openDataEditor() {
+    // 加载两套数据到编辑器
+    editorPullSL  = loadModeData('pull');
+    editorPullDO  = loadModeDoorOffset('pull');
+    editorPullWA  = loadModeArrData('pull', 'width');
+    editorPullHA  = loadModeArrData('pull', 'height');
+    editorFrameSL = loadModeData('frame');
+    editorFrameDO = loadModeDoorOffset('frame');
+    editorFrameWA = loadModeArrData('frame', 'width');
+    editorFrameHA = loadModeArrData('frame', 'height');
+    // 确保 mm 与 M 一致
+    deriveMm(editorPullSL);
+    deriveMm(editorFrameSL);
+
+    document.getElementById('modalOverlay').classList.add('active');
+    switchTab('filter');
+    renderFilterTable();
+    renderDoorTable();
+    renderArrTable('width');
+    renderArrTable('height');
+}
+
+function loadModeData(mode) {
+    var defKey = (mode === 'frame') ? 'frameSectionLength' : 'sectionLength';
+    var storKey = (mode === 'frame') ? 'frameFilter_data' : 'pullFilter_data';
+    var saved = localStorage.getItem(storKey);
+    if (saved) {
+        try { var d = JSON.parse(saved); if (d.sectionLength) return deepClone(d.sectionLength); }
+        catch(e) {}
+    }
+    return deepClone(DEFAULT_DATA[defKey]);
+}
+function loadModeDoorOffset(mode) {
+    var defKey = (mode === 'frame') ? 'frameDoorOffset' : 'doorOffset';
+    var storKey = (mode === 'frame') ? 'frameFilter_data' : 'pullFilter_data';
+    var saved = localStorage.getItem(storKey);
+    if (saved) {
+        try { var d = JSON.parse(saved); if (d.doorOffset) return deepClone(d.doorOffset); }
+        catch(e) {}
+    }
+    return deepClone(DEFAULT_DATA[defKey]);
+}
+function loadModeArrData(mode, type) {
+    var defKey = (mode === 'frame') ? (type === 'width' ? 'frameWidthArr' : 'frameHeightArr') : (type === 'width' ? 'widthArr' : 'heightArr');
+    var storKey = (mode === 'frame') ? 'frameFilter_data' : 'pullFilter_data';
+    var field = type === 'width' ? 'widthArr' : 'heightArr';
+    var saved = localStorage.getItem(storKey);
+    if (saved) {
+        try { var d = JSON.parse(saved); if (d[field]) return deepClone(d[field]); }
+        catch(e) {}
+    }
+    return deepClone(DEFAULT_DATA[defKey]);
+}
+
+function saveModeData(mode, sl, dOff, wa, ha) {
+    var storKey = (mode === 'frame') ? 'frameFilter_data' : 'pullFilter_data';
+    localStorage.setItem(storKey, JSON.stringify({
+        sectionLength: sl,
+        doorOffset: dOff,
+        widthArr: wa,
+        heightArr: ha
+    }));
+}
+
+function closeDataEditor() {
+    document.getElementById('modalOverlay').classList.remove('active');
+}
+
+function switchTab(tab) {
+    document.querySelectorAll('.modal-tab').forEach(function(t,i){
+        t.classList.toggle('active', t.textContent.includes(
+            tab==='filter'?'过滤器':tab==='door'?'检修门':tab==='width'?'宽度':'高度'));
+    });
+    document.querySelectorAll('.tab-content').forEach(function(c){
+        c.classList.remove('active');
+    });
+    document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ===== 渲染过滤器编辑表格（双模式） =====
+function renderFilterTable() {
+    var html = '';
+    // 抽拉
+    FILTER_KEYS.forEach(function(key){
+        var d = editorPullSL[key];
+        html += '<tr style="background:#f8faff;">';
+        html += '<td><span class="tag">' + key + '</span></td>';
+        html += '<td style="font-weight:600;color:#1a73e8;">抽拉过滤</td>';
+        html += '<td><input class="wide" value="' + escHtml(d.name) + '" data-mode="pull" data-key="' + key + '" data-field="name"></td>';
+        html += '<td><input value="' + d.M + '" data-mode="pull" data-key="' + key + '" data-field="M"></td>';
+        html += '<td style="color:#999;">--</td>';
+        html += '</tr>';
+    });
+    // 框架
+    FILTER_KEYS.forEach(function(key){
+        var d = editorFrameSL[key];
+        var sM = d.serviceM != null ? d.serviceM : 6;
+        html += '<tr style="background:#fff8f0;">';
+        html += '<td><span class="tag">' + key + '</span></td>';
+        html += '<td style="font-weight:600;color:#e67e00;">框架过滤</td>';
+        html += '<td><input class="wide" value="' + escHtml(d.name) + '" data-mode="frame" data-key="' + key + '" data-field="name"></td>';
+        html += '<td><input value="' + d.M + '" data-mode="frame" data-key="' + key + '" data-field="M"></td>';
+        html += '<td><input style="width:55px;" value="' + sM + '" data-mode="frame" data-key="' + key + '" data-field="serviceM"></td>';
+        html += '</tr>';
+    });
+    document.getElementById('tblFilter').innerHTML = html;
+}
+
+// ===== 渲染检修门编辑表格（双模式） =====
+function renderDoorTable() {
+    var html = '';
+    FILTER_KEYS.forEach(function(key){
+        var d = editorPullSL[key];
+        var pullOff = editorPullDO[key];
+        var frameOff = editorFrameDO[key];
+        html += '<tr>';
+        html += '<td><span class="tag">' + key + '</span></td>';
+        html += '<td>' + escHtml(d.name) + '</td>';
+        html += '<td><input style="width:55px;" value="' + pullOff.x + '" data-mode="pull" data-key="' + key + '" data-field="x" title="宽偏移X(mm): 门宽=宽模数×100-X"></td>';
+        html += '<td><input style="width:55px;" value="' + pullOff.y + '" data-mode="pull" data-key="' + key + '" data-field="y" title="高偏移Y(mm): 门高=高模数×100-Y"></td>';
+        html += '<td><input style="width:55px;" value="' + frameOff.x + '" data-mode="frame" data-key="' + key + '" data-field="x" title="宽偏移X(mm)"></td>';
+        html += '<td><input style="width:55px;" value="' + frameOff.y + '" data-mode="frame" data-key="' + key + '" data-field="y" title="高偏移Y(mm)"></td>';
+        html += '</tr>';
+    });
+    document.getElementById('tblDoor').innerHTML = html;
+}
+
+// ===== 渲染排布编辑表格（双模式并列） =====
+function renderArrTable(type) {
+    var pullMap = (type === 'width') ? editorPullWA : editorPullHA;
+    var frameMap = (type === 'width') ? editorFrameWA : editorFrameHA;
+    var tblId = (type === 'width') ? 'tblWidth' : 'tblHeight';
+    var html = '';
+    for (var m = 6; m <= 33; m++) {
+        var pArr = pullMap[m] || [];
+        var fArr = frameMap[m] || [];
+        html += '<tr>';
+        html += '<td><strong>' + m + 'M</strong></td>';
+        html += '<td style="background:#f8faff;"><div class="arr-input-row">';
+        html += renderArrInputs(m, pArr, 'pull', type) + '</div></td>';
+        html += '<td style="background:#fff8f0;"><div class="arr-input-row">';
+        html += renderArrInputs(m, fArr, 'frame', type) + '</div></td>';
+        html += '</tr>';
+    }
+    document.getElementById(tblId).innerHTML = html;
+}
+
+function renderArrInputs(mod, arr, mode, type) {
+    var h = '';
+    for (var i = 0; i < arr.length; i++) {
+        if (i > 0) h += '<span class="sep">+</span>';
+        h += '<input style="width:40px;" value="' + arr[i] + '" data-mod="' + mod + '" data-idx="' + i + '" data-mode="' + mode + '" data-type="' + type + '">';
+    }
+    h += '<span class="sep">= ' + (arr.reduce(function(a,b){return a+b;},0) || '?') + 'M</span>';
+    h += '<button style="margin-left:4px;font-size:10px;padding:1px 6px;border:1px solid #1a73e8;color:#1a73e8;background:#fff;border-radius:3px;cursor:pointer;" onclick="addArrItem(' + mod + ',\'' + type + '\',\'' + mode + '\')">+</button>';
+    h += '<button style="font-size:10px;padding:1px 6px;border:1px solid #e53935;color:#e53935;background:#fff;border-radius:3px;cursor:pointer;" onclick="delArrItem(' + mod + ',\'' + type + '\',\'' + mode + '\')">-</button>';
+    return h;
+}
+
+function getEditorArrMap(type, mode) {
+    if (type === 'width') return (mode === 'frame') ? editorFrameWA : editorPullWA;
+    return (mode === 'frame') ? editorFrameHA : editorPullHA;
+}
+
+function addArrItem(mod, type, mode) {
+    var map = getEditorArrMap(type, mode);
+    if (!map[mod]) map[mod] = [];
+    map[mod].push(5);
+    renderArrTable(type);
+}
+
+function delArrItem(mod, type, mode) {
+    var map = getEditorArrMap(type, mode);
+    if (map[mod] && map[mod].length > 1) {
+        map[mod].pop();
+    }
+    renderArrTable(type);
+}
+
+// ===== 应用编辑 =====
+function applyEdits() {
+    // 读取过滤器表格编辑（双模式）
+    document.querySelectorAll('#tblFilter input').forEach(function(inp){
+        var mode = inp.dataset.mode;
+        var key = inp.dataset.key;
+        var field = inp.dataset.field;
+        var sl = (mode === 'frame') ? editorFrameSL : editorPullSL;
+        if (field === 'name') {
+            sl[key].name = inp.value;
+        } else if (field === 'M') {
+            sl[key].M = parseFloat(inp.value) || 4;
+        } else if (field === 'serviceM') {
+            sl[key].serviceM = parseFloat(inp.value) || 0;
+        }
+    });
+    // 读取检修门表格编辑
+    document.querySelectorAll('#tblDoor input').forEach(function(inp){
+        var mode = inp.dataset.mode;
+        var key = inp.dataset.key;
+        var field = inp.dataset.field;
+        var dOff = (mode === 'frame') ? editorFrameDO : editorPullDO;
+        if (field === 'x') { dOff[key].x = parseInt(inp.value) || 500; }
+        else if (field === 'y') { dOff[key].y = parseInt(inp.value) || 200; }
+    });
+    // 从模数自动推导 mm
+    deriveMm(editorPullSL);
+    deriveMm(editorFrameSL);
+    // 读取排布表格编辑（双模式）
+    ['width','height'].forEach(function(type){
+        var tblId = (type === 'width') ? 'tblWidth' : 'tblHeight';
+        document.querySelectorAll('#' + tblId + ' input[data-mod]').forEach(function(inp){
+            var mod = parseInt(inp.dataset.mod);
+            var idx = parseInt(inp.dataset.idx);
+            var mode = inp.dataset.mode;
+            var map = getEditorArrMap(type, mode);
+            if (!map[mod]) map[mod] = [];
+            map[mod][idx] = parseInt(inp.value) || 5;
+        });
+    });
+
+    // 分别保存两套数据
+    saveModeData('pull', editorPullSL, editorPullDO, editorPullWA, editorPullHA);
+    saveModeData('frame', editorFrameSL, editorFrameDO, editorFrameWA, editorFrameHA);
+
+    // 刷新当前模式运行时数据
+    loadDefaults();
+    loadData();
+
+    closeDataEditor();
+    rebuildFilterSelect();
+    updateAll();
+}
+
+// ===== 导出数据（Excel，双模式） =====
+function exportData() {
+    // 确保编辑器数据已加载
+    if (!editorPullSL) openDataEditor();
+    var wb = XLSX.utils.book_new();
+    // Sheet1: 过滤器类型（仅模数，mm 由 M*100 自动推导）
+    var filterRows = [['标识','过滤形式','过滤器名称','模数(M)','检修段长(M)','宽偏移X','高偏移Y']];
+    FILTER_KEYS.forEach(function(key){
+        var d = editorPullSL[key];
+        var off = editorPullDO[key];
+        filterRows.push([key, '抽拉', d.name, d.M, '', off.x, off.y]);
+    });
+    FILTER_KEYS.forEach(function(key){
+        var d = editorFrameSL[key];
+        var off = editorFrameDO[key];
+        filterRows.push([key, '框架', d.name, d.M, d.serviceM||6, off.x, off.y]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(filterRows), '过滤器类型');
+    // Sheet2: 宽度排布
+    var widthRows = [['宽度模数','抽拉组合','框架组合']];
+    for (var m = 6; m <= 33; m++) {
+        widthRows.push([m, (editorPullWA[m]||[]).join('+'), (editorFrameWA[m]||[]).join('+')]);
+    }
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(widthRows), '宽度排布');
+    // Sheet3: 高度排布
+    var heightRows = [['高度模数','抽拉组合','框架组合']];
+    for (var m = 6; m <= 33; m++) {
+        heightRows.push([m, (editorPullHA[m]||[]).join('+'), (editorFrameHA[m]||[]).join('+')]);
+    }
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(heightRows), '高度排布');
+    XLSX.writeFile(wb, '过滤器全量数据_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// ===== 导入数据（Excel，双模式） =====
+function importData(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var wb = XLSX.read(e.target.result, {type:'array'});
+            // 确保编辑器数据已加载
+            if (!editorPullSL) openDataEditor();
+            // 读取 Sheet: 过滤器类型
+            var sheetFilter = wb.Sheets['过滤器类型'];
+            if (!sheetFilter) { alert('缺少「过滤器类型」工作表'); return; }
+            var filterArr = XLSX.utils.sheet_to_json(sheetFilter, {header:1});
+            for (var i = 1; i < filterArr.length; i++) {
+                var row = filterArr[i];
+                var key = row[0];
+                var form = (row[1] || '').toString();
+                if (!key || FILTER_KEYS.indexOf(key) < 0) continue;
+                var isFrame = (form === '框架');
+                var sl = isFrame ? editorFrameSL : editorPullSL;
+                var dOff = isFrame ? editorFrameDO : editorPullDO;
+                if (row[2]) sl[key].name = String(row[2]);
+                if (row[3] != null) sl[key].M = parseFloat(row[3]) || sl[key].M;
+                if (row[4] != null && isFrame) sl[key].serviceM = parseFloat(row[4]) || 0;
+                if (row[5] != null) dOff[key].x = parseInt(row[5]) || dOff[key].x;
+                if (row[6] != null) dOff[key].y = parseInt(row[6]) || dOff[key].y;
+            }
+            // 从模数自动推导 mm
+            deriveMm(editorPullSL);
+            deriveMm(editorFrameSL);
+            // 读取 Sheet: 宽度排布
+            var sheetWidth = wb.Sheets['宽度排布'];
+            if (sheetWidth) {
+                var widthArr = XLSX.utils.sheet_to_json(sheetWidth, {header:1});
+                for (var i = 1; i < widthArr.length; i++) {
+                    var row = widthArr[i];
+                    var mod = parseInt(row[0]);
+                    if (mod >= 6 && mod <= 33) {
+                        if (row[1]) { var pv = parseVals(row[1]); if (pv.length) editorPullWA[mod] = pv; }
+                        if (row[2]) { var fv = parseVals(row[2]); if (fv.length) editorFrameWA[mod] = fv; }
+                    }
+                }
+            }
+            // 读取 Sheet: 高度排布
+            var sheetHeight = wb.Sheets['高度排布'];
+            if (sheetHeight) {
+                var heightArr = XLSX.utils.sheet_to_json(sheetHeight, {header:1});
+                for (var i = 1; i < heightArr.length; i++) {
+                    var row = heightArr[i];
+                    var mod = parseInt(row[0]);
+                    if (mod >= 6 && mod <= 33) {
+                        if (row[1]) { var pv = parseVals(row[1]); if (pv.length) editorPullHA[mod] = pv; }
+                        if (row[2]) { var fv = parseVals(row[2]); if (fv.length) editorFrameHA[mod] = fv; }
+                    }
+                }
+            }
+            // 保存
+            saveModeData('pull', editorPullSL, editorPullDO, editorPullWA, editorPullHA);
+            saveModeData('frame', editorFrameSL, editorFrameDO, editorFrameWA, editorFrameHA);
+            loadDefaults();
+            loadData();
+            renderFilterTable();
+            renderDoorTable();
+            renderArrTable('width');
+            renderArrTable('height');
+            rebuildFilterSelect();
+            updateAll();
+            alert('导入成功！抽拉+框架数据已全部更新。');
+        } catch(err) {
+            alert('导入失败：' + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+    input.value = '';
+}
+
+function parseVals(str) {
+    return String(str).split('+').map(function(v){return parseInt(v.trim())||0;}).filter(function(v){return v>0;});
+}
+
+// ===== 恢复默认 =====
+function resetDefaults() {
+    if (!confirm('确定恢复抽拉+框架过滤器全部基础数据为知识库默认值？当前编辑内容将丢失。')) return;
+    // 重置反恐精英
+    editorPullSL  = deepClone(DEFAULT_DATA.sectionLength);
+    editorPullDO  = deepClone(DEFAULT_DATA.doorOffset);
+    editorPullWA  = deepClone(DEFAULT_DATA.widthArr);
+    editorPullHA  = deepClone(DEFAULT_DATA.heightArr);
+    editorFrameSL = deepClone(DEFAULT_DATA.frameSectionLength);
+    editorFrameDO = deepClone(DEFAULT_DATA.frameDoorOffset);
+    editorFrameWA = deepClone(DEFAULT_DATA.frameWidthArr);
+    editorFrameHA = deepClone(DEFAULT_DATA.frameHeightArr);
+    saveModeData('pull', editorPullSL, editorPullDO, editorPullWA, editorPullHA);
+    saveModeData('frame', editorFrameSL, editorFrameDO, editorFrameWA, editorFrameHA);
+    loadDefaults();
+    loadData();
+    renderFilterTable();
+    renderDoorTable();
+    renderArrTable('width');
+    renderArrTable('height');
+    rebuildFilterSelect();
+    updateAll();
+}
+
+// ===== 重建过滤器下拉框 =====
+function rebuildFilterSelect() {
+    var sel = document.getElementById('filterType');
+    var curVal = sel.value;
+    sel.innerHTML = '';
+    FILTER_KEYS.forEach(function(key){
+        sel.add(new Option(sectionLengthData[key].name, key));
+    });
+    sel.value = FILTER_KEYS.indexOf(curVal) >= 0 ? curVal : 'g3_46';
+}
+
+// ===== HTML 转义 =====
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ===== 初始化 =====
+function init() {
+    loadData();
+    rebuildFilterSelect();
+    // 填充模数下拉框
+    var wSel = document.getElementById('widthModule');
+    var hSel = document.getElementById('heightModule');
+    for (var i = 6; i <= 33; i++) {
+        wSel.add(new Option(i + 'M (' + (i*100) + 'mm)', i));
+        hSel.add(new Option(i + 'M (' + (i*100) + 'mm)', i));
+    }
+    wSel.value = '10';
+    hSel.value = '10';
+    updateAll();
+}
+
+// ===== 更新所有结果 =====
+function updateAll() {
+    var filterType = document.getElementById('filterType').value;
+    var wMod = parseInt(document.getElementById('widthModule').value);
+    var hMod = parseInt(document.getElementById('heightModule').value);
+    updateLengthAndDoor(filterType, wMod, hMod);
+    updateArrangement('width', wMod, widthArrangement, 'widthVisual', 'widthBadge');
+    updateArrangement('height', hMod, heightArrangement, 'heightVisual', 'heightBadge');
+    updateFilterSpecs(wMod, hMod);
+    updateTips(filterType, wMod, hMod);
+}
+
+// ===== 段长 & 检修门 =====
+function updateLengthAndDoor(filterType, wMod, hMod) {
+    var data = sectionLengthData[filterType];
+    var isFrame = currentMode === 'frame';
+    var offset = doorOffsetData[filterType];
+    var doorType;
+
+    // 门宽 = 宽模数×100 - X, 门高 = 高模数×100 - Y
+    var doorW = wMod * 100 - offset.x;
+    var doorH = hMod * 100 - offset.y;
+
+    if (isFrame && frameDoorType === 'hinge') {
+        doorType = '铰链门';
+    } else {
+        doorType = '拆卸门';
+    }
+
+    // 卡片显隐
+    var card3 = document.getElementById('card3');
+    if (isFrame) {
+        card3.style.display = '';
+        var hasFront = document.getElementById('hasFrontDoor').value;
+        var sMm, sM;
+        if (hasFront === 'yes') {
+            sMm = 0; sM = 0;
+        } else {
+            sMm = data.serviceMm || 600;
+            sM = data.serviceM || 6;
+        }
+        document.getElementById('cardTitle1').textContent = '检修段长（' + sM + 'M）';
+        document.getElementById('resLength').textContent = sMm + 'mm';
+        document.getElementById('resLengthM').textContent = '';
+        // 过滤段长
+        document.getElementById('card3').querySelector('.card-title').textContent = '过滤段长（' + data.M + 'M）';
+        document.getElementById('resFilterLength').textContent = data.mm + 'mm';
+        document.getElementById('resFilterLengthM').textContent = '';
+    } else {
+        card3.style.display = 'none';
+        document.getElementById('cardTitle1').textContent = '过滤段长（' + data.M + 'M）';
+        document.getElementById('resLength').textContent = data.mm + 'mm';
+        document.getElementById('resLengthM').textContent = '';
+    }
+    // 检修门
+    document.getElementById('resDoor').textContent = '类型：' + doorType;
+    document.getElementById('resDoorDetail').textContent = '规格：' + doorW + ' × ' + doorH + ' mm';
+}
+
+// ===== 过滤器规格（宽高格式） =====
+function updateFilterSpecs(wMod, hMod) {
+    var wArr = widthArrangement[wMod] || [];
+    var hArr = heightArrangement[hMod] || [];
+    var countMap = {}; // { '54': 4 } 合并相同规格
+    var gridHtml = '';
+    if (wArr.length && hArr.length) {
+        gridHtml = '<div style="display:inline-grid;grid-template-columns:repeat(' + wArr.length + ', auto);gap:6px;margin-top:8px;">';
+        for (var hi = 0; hi < hArr.length; hi++) {
+            for (var wi = 0; wi < wArr.length; wi++) {
+                var w = wArr[wi];
+                var h = hArr[hi];
+                var key = '' + w + h;
+                countMap[key] = (countMap[key] || 0) + 1;
+                var code = key + '-' + countMap[key];
+                gridHtml += '<span class="spec-tag">' + code + '</span>';
+            }
+        }
+        gridHtml += '</div>';
+    }
+    // 生成合并后的规格列表
+    var specs = [];
+    var total = 0;
+    var keys = Object.keys(countMap).sort();
+    keys.forEach(function(key) {
+        var cnt = countMap[key];
+        total += cnt;
+        specs.push(key + '-' + cnt);
+    });
+    document.getElementById('filterSpecs').textContent = specs.length ? specs.join(' / ') : '--';
+    document.getElementById('filterSpecGrid').innerHTML = gridHtml;
+    document.getElementById('specCountBadge').textContent = total + ' 个过滤器 (' + specs.length + ' 种规格)';
+}
+
+// ===== 过滤器排布可视化 =====
+function updateArrangement(direction, mod, dataMap, visualId, badgeId) {
+    var container = document.getElementById(visualId);
+    document.getElementById(badgeId).textContent = mod + 'M';
+    var arr = dataMap[mod];
+    if (!arr || !arr.length) {
+        container.innerHTML = '<div class="warning">模数 ' + mod + 'M 不在标准' + (currentMode==='frame'?'框架':'抽拉') + '过滤器排布表范围内（6~33M）</div>';
+        return;
+    }
+    var html = '<div style="font-size:13px;font-weight:600;color:#333;">' + arr.join(' + ') + '</div>';
+    container.innerHTML = html;
+}
+
+// ===== 模式切换 =====
+var currentMode = 'pull';
+var frameDoorType = 'pull'; // 框架模式门类型：'pull'=拆卸门, 'hinge'=铰链门
+function switchMode(mode, btn) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-toggle button').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    // 切换数据显示
+    loadDefaults();
+    loadData();
+    rebuildFilterSelect();
+    updateAll();
+    // 更新标题与卡片标签
+    document.title = (mode === 'frame' ? '框架' : '抽拉') + '过滤器选型';
+    // 抽拉模式 2 个等高卡片，框架模式 3 个等高卡片
+    var row = document.getElementById('resultRow');
+    if (mode === 'frame') {
+        row.classList.add('frame-grid');
+        row.style.gridTemplateColumns = ''; // CSS 控制
+        document.getElementById('cardTitle2').textContent = '检修门';
+        // 框架默认拆卸门
+        frameDoorType = 'pull';
+        var ds = document.getElementById('doorTypeSelect');
+        ds.value = 'pull';
+        ds.disabled = false;
+    } else {
+        row.classList.remove('frame-grid');
+        row.style.gridTemplateColumns = ''; // CSS 默认 1fr
+        document.getElementById('cardTitle2').textContent = '检修门';
+        var ds = document.getElementById('doorTypeSelect');
+        ds.value = 'pull';
+        ds.disabled = true;
+    }
+}
+
+// ===== 门类型切换 =====
+function onDoorTypeChange(val) {
+    frameDoorType = val;
+    updateAll();
+}
+
+// ===== 提示信息 =====
+function updateTips(filterType, wMod, hMod) {
+    var tips = document.getElementById('inputTips');
+    var data = sectionLengthData[filterType];
+    var isFrame = currentMode === 'frame';
+    var offset = doorOffsetData[filterType];
+    var doorType;
+
+    // 门宽 = 宽模数×100 - X, 门高 = 高模数×100 - Y
+    var doorW = wMod * 100 - offset.x;
+    var doorH = hMod * 100 - offset.y;
+
+    if (isFrame && frameDoorType === 'hinge') {
+        doorType = '铰链门';
+    } else {
+        doorType = '拆卸门';
+    }
+    tips.innerHTML = '<div class="info-tip"><strong>' + doorType + '：</strong>' + doorW + ' × ' + doorH + 'mm'
+        + '<br><strong>段长：</strong>' + data.mm + 'mm（' + data.M + 'M）</div>';
+}
+
+// ===== 启动 =====
+window.onload = init;
+
+// ===== 热更新：检测文件变化自动刷新 =====
+(function() {
+    var lm = null;
+    setInterval(function() {
+        fetch(location.href, { method: 'HEAD', cache: 'no-store' })
+            .then(function(r) {
+                var h = r.headers.get('Last-Modified');
+                if (!h) return;
+                if (lm === null) { lm = h; return; }
+                if (lm !== h) { location.reload(); }
+            }).catch(function(){});
+    }, 2000);
+})();
+</script>
+</body>
+</html>

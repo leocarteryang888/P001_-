@@ -1,0 +1,16 @@
+# Windows reserved-name artifact retained locally for traceability
+/nul
+
+# Editor and operating-system temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+~$*
+.DS_Store
+Thumbs.db
+
+# Local editor settings
+.vscode/
+.idea/
