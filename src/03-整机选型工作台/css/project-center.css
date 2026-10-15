@@ -1,0 +1,43 @@
+.project-setup-screen { position: fixed; inset: 0; z-index: 10000; overflow: auto; padding: 18px; background: #edf4f5; }
+#projectManagerScreen { padding: 10px; }
+.project-setup-screen:not([hidden]) ~ .toolbar, .project-setup-screen:not([hidden]) ~ .layout { visibility: hidden; pointer-events: none; }
+.project-setup-screen[hidden] { display: none; }
+.setup-window { width: min(1500px, 100%); max-height: calc(100vh - 36px); overflow: auto; margin: 0 auto; padding: 20px; border: 1px solid #d2dfe3; border-radius: 8px; background: #f8fbfc; box-shadow: 0 12px 36px #20374018; }
+#projectManagerScreen .setup-window { height: 100%; max-height: none; padding: 12px; overflow: hidden; }
+.setup-heading { margin-bottom: 14px; }
+#projectManagerScreen .setup-heading { margin-bottom: 3px; }
+.setup-heading h1 { margin: 0; color: #203740; font-size: 25px; }
+#projectManagerScreen .setup-heading h1 { font-size: 22px; }
+.setup-heading p { margin: 5px 0 0; color: #627b83; }
+.project-manager-actions { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+#projectManagerScreen .project-manager-actions { gap: 6px; margin: 6px 0 8px; padding-bottom: 8px; }
+.manager-session-note { margin-left: auto; color: #738990; font-size: 12px; }
+.project-center-grid { display: grid; grid-template-columns: minmax(230px, 280px) minmax(0, 1fr); gap: 14px; height: calc(100vh - 160px); min-height: 480px; }
+#projectManagerScreen .project-center-grid { flex: 1 1 auto; height: auto; min-height: 0; }
+.project-tree-panel, .project-list-panel { min-height: 0; overflow: auto; border: 1px solid #d5e0e3; border-radius: 6px; background: #fff; padding: 14px; }
+.project-detail-panel { display: grid; grid-template-rows: minmax(0, 1fr) minmax(150px, 180px); overflow: hidden; }
+.project-info-scroll { min-height: 0; overflow: auto; padding-right: 5px; }
+.project-plans-panel { min-height: 0; display: flex; flex-direction: column; border-top: 1px solid #dce6e8; padding-top: 3px; background: #fff; }
+.project-center-meta { grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 9px 12px; margin-top: 12px; }
+.project-center-meta label { min-width: 0; }
+.project-center-meta input { width: 100%; min-width: 0; }
+.project-center-meta .setup-span-2 { grid-column: span 2; }
+.setup-condition-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.setup-condition-grid .condition-group { margin: 0; padding: 10px; border: 1px solid #e0e8ea; border-radius: 5px; }
+.project-center-actions, .project-units-heading { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.project-center-actions { position: sticky; bottom: 0; z-index: 2; flex-wrap: wrap; margin-top: 4px; padding: 8px 0; border-top: 1px solid #dce6e8; background: #fff; }
+.project-info-scroll .setup-message { position: sticky; bottom: 55px; z-index: 3; min-height: 20px; margin: 0; padding: 4px 6px; background: #fff; }
+.project-units-heading { justify-content: space-between; border-top: 1px solid #e1e9eb; padding-top: 12px; }
+.project-units-heading h2 { margin: 0; font-size: 16px; }
+.project-manager-list { min-height: 0; overflow: auto; }
+.history-project { display: flex; width: 100%; flex-direction: column; gap: 4px; padding: 11px; margin: 5px 0; text-align: left; background: #fff; }
+.history-project strong { color: #294750; }
+.history-project small { color: #74888d; }
+.history-project.is-current { border-color: #168c9b; background: #edf8f8; box-shadow: inset 3px 0 #168c9b; }
+.project-empty-state { padding: 24px 10px; color: #788b91; text-align: center; }
+.project-row { padding: 10px 0; border-bottom: 1px solid #e4ebed; }
+.project-row-actions { display: flex; gap: 6px; }
+.danger-button { color: #9c403c; }
+.setup-message { margin: 6px 0 0; color: #9c403c; }
+@media (max-width: 900px) { .project-center-grid { grid-template-columns: 220px minmax(0,1fr); }.project-center-meta { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 620px) { .project-setup-screen { padding: 6px; }.setup-window { max-height: calc(100vh - 12px); padding: 10px; }.project-center-grid { display: flex; height: auto; flex-direction: column; }.project-tree-panel { max-height: 180px; }.project-detail-panel { min-height: 500px; grid-template-rows: minmax(0,1fr) 190px; }.setup-condition-grid { grid-template-columns: 1fr; }.project-center-meta { grid-template-columns: 1fr; }.project-center-meta .setup-span-2 { grid-column: auto; }.manager-session-note { display: none; } }

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>表冷器选型 · 盘管子模块</title>
+  <link rel="stylesheet" href="css/coil-selector.css?v=20260826-2">
+  <link rel="stylesheet" href="css/database-dialog.css?v=20260826-2"><link rel="stylesheet" href="css/selection-handoff.css">
+  <script defer src="vendor/xlsx.full.min.js?v=20260826-2"></script>
+  <script defer src="data/coil-database.js?v=20260826-2"></script>
+  <script defer src="data/coil-section-database.js?v=20261008-1"></script>
+  <script defer src="js/coil-data-io.js?v=20260826-2"></script>
+  <script defer src="js/coil-selector.js?v=20260826-2"></script>
+  <script defer src="js/app.js?v=20260826-2"></script>
+  <script defer src="js/database-dialog.js?v=20260826-2"></script>
+  <script defer src="js/hot-reload.js?v=20260826-1"></script>
+</head>
+<body>
+  <header><div><small>P001 · 盘管子模块</small><h1>表冷器选型</h1></div><div class="header-tools"><span>标准水 / 乙二醇盘管</span><button type="button" id="openCoilDatabase">数据库维护 · Excel</button></div></header>
+  <main>
+    <section class="panel parameters">
+      <h2>选型参数</h2>
+      <form id="coilForm">
+        <label for="series">箱体系列</label>
+        <select id="series"><option value="">请选择箱体系列</option><option value="25W" selected>25W · 标准箱体</option><option value="50W">50W · 本标准表不适用</option></select>
+        <label for="installation">安装形式</label>
+        <select id="installation"><option value="">请选择盘管安装形式</option><option value="floor" selected>落地式</option><option value="ceiling">吊顶式</option></select>
+        <label for="spec">箱体规格（高模数 + 宽模数）</label>
+        <input id="spec" list="specOptions" value="1012" maxlength="4" inputmode="numeric" autocomplete="off" aria-describedby="specHelp">
+        <datalist id="specOptions"></datalist>
+        <p id="specHelp" class="help">例：1012 = 高10M × 宽12M；0607 的前导零需保留。</p>
+        <label for="rows">换热管排数</label>
+        <select id="rows"><option value="">请选择排数</option><option>2</option><option>3</option><option selected>4</option><option>6</option><option>8</option></select>
+        <label for="tube">换热管直径（mm）</label>
+        <select id="tube"><option value="">请选择管径</option><option value="9.52" selected>φ9.52</option><option value="12.7">φ12.7</option></select>
+        <label for="headerDiameter">汇管直径</label>
+        <select id="headerDiameter"><option value="">请选择汇管径</option><option value="32">DN32</option><option value="40">DN40</option><option value="50" selected>DN50</option><option value="65">DN65</option><option value="80">DN80</option><option value="100">DN100</option></select>
+        <button type="submit">选出表冷器型号</button>
+      </form>
+    </section>
+    <section class="panel results" aria-live="polite">
+      <h2>选型结果 <span id="statusBadge"></span></h2>
+      <p id="selectionError" class="error" hidden></p>
+      <div id="selectionResult">
+        <div class="model-card"><span>规格型号（参考）</span><output id="model"></output><small>由原表尺寸及规范型号示例生成，不等同于完整物料编码。</small></div>
+        <div class="metrics">
+          <div><span>单件迎面宽 A</span><strong id="faceWidth"></strong></div>
+          <div><span>单件迎面高 B</span><strong id="faceHeight"></strong></div>
+          <div><span>盘管数量</span><strong id="coilCount"></strong></div>
+          <div><span>盘管厚度 C</span><strong id="thickness"></strong></div>
+        </div>
+        <dl><dt>箱体外形（高 × 宽）</dt><dd id="boxSize"></dd><dt>选型条件</dt><dd id="selectionSummary"></dd><dt>数据依据</dt><dd id="source"></dd></dl>
+        <ul id="warnings" class="warnings" hidden></ul>
+      </div>
+      <aside>本界面只做几何规格选型。制冷量、水流量、管程、风阻和水阻需按规范 §2.5.2 使用盘管计算软件另行校核；不凭这四项输入判定热工性能是否满足。</aside>
+      <section id="workbenchHandoff" class="handoff" hidden><h3>返回整机工作台</h3><p id="handoffSummary"></p><label class="handoff-confirm"><input type="checkbox" id="confirmCoilCriteria">我已核对系列、安装形式、盘管规格与性能边界。</label><p id="handoffStatus" role="status" aria-live="polite"></p><button type="button" id="applyToWorkbench" disabled>应用到工作台</button></section>
+      <details><summary>查看当前安装形式的标准规格表（151项）</summary><div class="table-wrap"><table><thead><tr><th>箱体规格</th><th>管径</th><th>数量</th><th>高度 mm</th><th>DN32</th><th>DN40</th><th>DN50</th><th>DN65</th><th>DN80</th><th>DN100</th></tr></thead><tbody id="standardRows"></tbody></table></div></details>
+    </section>
+  </main>
+  <p id="coilDatabaseNotice" class="database-notice" hidden></p>
+  <dialog id="coilDatabaseDialog" aria-labelledby="coilDatabaseTitle">
+    <div class="dialog-heading"><h2 id="coilDatabaseTitle">盘管数据库维护</h2><button type="button" id="closeCoilDatabase">关闭</button></div>
+    <p>可直接在线查看当前生效数据，或导出 Excel 修改后重新导入。</p>
+    <div class="dialog-actions"><button type="button" id="viewCoilDatabase">在线查看数据库</button><button type="button" id="exportCoilDatabase">导出 Excel</button></div>
+    <label for="coilDatabaseFile">导入 Excel（.xlsx / .xls，最大 2MB）</label>
+    <input type="file" id="coilDatabaseFile" accept=".xlsx,.xls">
+    <p id="coilDatabaseStatus" role="status" aria-live="polite"></p>
+    <p class="dialog-hint">导入文件必须完整包含“吊顶标准表”“落地标准表”“厚度表”，不允许公式。校验通过后点击应用；失败不会改变当前数据。</p>
+    <div class="dialog-actions"><button type="button" id="applyCoilDatabase" disabled>应用导入</button></div>
+  </dialog>
+  <dialog id="coilDatabaseViewer" aria-labelledby="coilViewerTitle">
+    <div class="dialog-heading"><h2 id="coilViewerTitle">在线查看盘管数据库</h2><button type="button" id="closeCoilViewer">返回</button></div>
+    <div class="viewer-tabs" role="tablist"><button type="button" role="tab" data-coil-view="ceiling" aria-selected="true">吊顶标准表</button><button type="button" role="tab" data-coil-view="floor" aria-selected="false">落地标准表</button><button type="button" role="tab" data-coil-view="thickness" aria-selected="false">厚度表</button></div>
+    <div class="viewer-table-wrap"><table id="coilViewerTable"></table></div>
+  </dialog>
+</body>
+</html>

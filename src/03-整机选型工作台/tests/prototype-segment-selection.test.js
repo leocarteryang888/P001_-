@@ -1,0 +1,18 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const html = fs.readFileSync(path.resolve(__dirname, '../../../outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html'), 'utf8');
+assert.match(html, /function normalizeRuntimeSegmentIds\(\)/);
+assert.match(html, /renderSegments=function\(\)\{\s*normalizeRuntimeSegmentIds\(\);/);
+assert.match(html, /function selectSegment\(id\)\{normalizeRuntimeSegmentIds\(\);if\(!segments\.some\(segment=>segment\.id===id\)\)return;/);
+const allocator = html.match(/function allocateSegmentId\(\)\{([\s\S]*?)\}\nfunction normalizeRuntimeSegmentIds/);
+const normalizer = html.match(/function normalizeRuntimeSegmentIds\(\)\{([\s\S]*?)\}\nfunction selectSegment/);
+assert.ok(allocator && normalizer, 'runtime ID helpers must be extractable');
+const context = {segments:[{id:'s8',name:'mix',partRef:{partId:'p1'},interface:{selection:{professionalResult:{id:'r1'}}}},{id:'s9',name:'primary'},{id:'s10',name:'coil'},{id:'s11',name:'fan'}],serial:8,formalReadonly:false,selectedId:'s8'};
+vm.runInNewContext(`function allocateSegmentId(){${allocator[1]}} function normalizeRuntimeSegmentIds(){${normalizer[1]}}`, context);
+const added = {id:context.allocateSegmentId(),name:'fresh',interface:{output:{value:3}},partRef:{partId:'p2'}}; context.segments.splice(0,0,added); context.selectedId=added.id; context.normalizeRuntimeSegmentIds();
+assert.equal(added.id, 's12'); assert.equal(context.segments[1].id, 's8'); assert.equal(context.selectedId, 's12'); assert.equal(context.segments[1].partRef.partId, 'p1'); assert.equal(context.segments[1].interface.selection.professionalResult.id, 'r1');
+const duplicate={id:'s8',name:'duplicate',model:'M1',interface:{output:{value:9}},partRef:{partId:'p3'}}; context.segments.push(duplicate); context.normalizeRuntimeSegmentIds(); assert.notEqual(duplicate.id,'s8'); assert.equal(duplicate.model,'M1'); assert.equal(duplicate.interface.output.value,9); assert.equal(duplicate.partRef.partId,'p3');
+const formal={segments:[{id:'s8'},{id:'s8'}],serial:8,formalReadonly:true,selectedId:'s8'}; vm.runInNewContext(`function allocateSegmentId(){${allocator[1]}} function normalizeRuntimeSegmentIds(){${normalizer[1]}}`, formal); const before=JSON.stringify(formal.segments); formal.normalizeRuntimeSegmentIds(); assert.equal(JSON.stringify(formal.segments),before);
+console.log('prototype segment selection contract passed');

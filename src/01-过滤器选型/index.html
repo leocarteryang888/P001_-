@@ -1,0 +1,26 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>过滤器选型</title><link rel="stylesheet" href="css/filter-selector.css"><link rel="stylesheet" href="css/database-dialog.css"><link rel="stylesheet" href="css/selection-handoff.css"><script src="vendor/xlsx.full.min.js" defer></script><script src="data/filter-database.js" defer></script><script src="js/filter-data-io.js" defer></script><script src="js/filter-selector.js" defer></script><script src="js/database-dialog.js" defer></script></head><body><header class="header">过滤器选型<button type="button" id="openDatabase" class="database-open">数据库管理 · Excel</button></header><p id="databaseNotice" class="database-notice" role="status" hidden></p><main class="container">
+<section class="panel input-panel" aria-labelledby="inputTitle"><h2 id="inputTitle">选型参数</h2><div class="mode-toggle" aria-label="过滤器安装形式"><button type="button" class="active" data-mode="pull" aria-pressed="true">抽拉过滤</button><button type="button" data-mode="frame" aria-pressed="false">框架过滤</button></div><div class="form-group"><label for="filterType">过滤器类型</label><select id="filterType"></select></div><div class="form-group"><label for="widthModule">箱体宽度模数</label><select id="widthModule"></select></div><div class="form-group"><label for="heightModule">箱体高度模数</label><select id="heightModule"></select></div><div class="note">本模块只根据过滤形式、过滤器类型及箱体宽高模数，计算标准过滤器数量和规格。</div></section>
+<section class="panel" aria-labelledby="resultTitle"><h2 id="resultTitle">选型结果</h2><div id="error" class="error" hidden></div><div id="resultContent"><div class="summary"><div class="summary-card"><div class="summary-label">过滤器类型</div><div class="summary-value" id="selectedType">--</div></div><div class="summary-card"><div class="summary-label">过滤器总数</div><div class="summary-value" id="totalCount">--</div></div><div class="summary-card"><div class="summary-label">规格种类</div><div class="summary-value" id="kindCount">--</div></div></div><div class="section"><h3>宽度方向排布 <span class="badge" id="widthBadge"></span></h3><div class="arrangement" id="widthArrangement"></div></div><div class="section"><h3>高度方向排布 <span class="badge" id="heightBadge"></span></h3><div class="arrangement" id="heightArrangement"></div></div><div class="section"><h3>过滤器排布</h3><div class="visual-grid" id="filterGrid"></div></div><div class="section"><h3>规格与数量</h3><div class="spec-list" id="specList"></div></div></div><section id="workbenchHandoff" class="handoff" hidden><h3>返回整机工作台</h3><p id="handoffSummary"></p><label class="handoff-confirm"><input type="checkbox" id="confirmFilterCriteria">我已核对过滤形式、过滤器类型和当前工作台箱体尺寸。</label><p id="handoffStatus" role="status" aria-live="polite"></p><button type="button" id="applyToWorkbench" disabled>应用到工作台</button></section></section>
+</main>
+<dialog id="databaseDialog" aria-labelledby="databaseTitle">
+  <div class="database-heading"><h2 id="databaseTitle">数据库导入 / 导出</h2><button type="button" id="closeDatabase" aria-label="关闭数据库窗口">关闭</button></div>
+  <p>先导出当前数据库作为模板，在 Excel 中修改后再导入。</p>
+  <ul><li>过滤器类型：标识、名称、说明。</li><li>宽度排布 / 高度排布：模数、抽拉组合、框架组合。</li><li>排布必须完整覆盖 6–33M，组合示例：5+5、4+6。请勿更改表头，不支持公式。</li></ul>
+  <div class="database-actions"><button type="button" id="viewDatabase">在线查看数据库</button><button type="button" id="exportDatabase">导出当前数据库（.xlsx）</button></div>
+  <label for="databaseFile" class="database-file-label">导入 Excel（.xlsx / .xls，最大 2MB）</label>
+  <input type="file" id="databaseFile" accept=".xlsx,.xls">
+  <p id="databaseStatus" role="status" aria-live="polite"></p>
+  <p class="database-hint">导入仅在点击“应用导入”后生效。数据保存在当前浏览器及页面地址下，刷新后仍有效；更换浏览器或移动页面后需重新导入。不会改写项目默认数据文件，请通过导出 Excel 备份。</p>
+  <div class="database-actions"><button type="button" id="applyDatabase" disabled>应用导入</button></div>
+</dialog>
+<dialog id="databaseViewer" aria-labelledby="databaseViewerTitle">
+  <div class="database-heading"><h2 id="databaseViewerTitle">在线查看数据库</h2><button type="button" id="closeDatabaseViewer">返回</button></div>
+  <p class="database-hint">以下是当前生效的数据；导入并应用 Excel 后再次打开即可查看新数据。</p>
+  <div class="database-view-tabs" role="tablist" aria-label="数据库表">
+    <button type="button" role="tab" data-view="types" aria-selected="true">过滤器类型</button>
+    <button type="button" role="tab" data-view="width" aria-selected="false">宽度排布</button>
+    <button type="button" role="tab" data-view="height" aria-selected="false">高度排布</button>
+  </div>
+  <div class="database-table-wrap"><table id="databaseViewTable"></table></div>
+</dialog>
+</body></html>

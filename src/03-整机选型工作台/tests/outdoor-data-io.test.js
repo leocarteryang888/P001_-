@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const vm=require('node:vm');
+const root=path.resolve(__dirname,'..'),XLSX=require('../../01-过滤器选型/vendor/xlsx.full.min.js');
+const store=new Map(),context={window:{XLSX,localStorage:{getItem:key=>store.get(key)||null,setItem:(key,value)=>store.set(key,value),removeItem:key=>store.delete(key)}},console};context.globalThis=context.window;vm.createContext(context);
+for(const file of ['data/outdoor-conditions.js','js/outdoor-data-io.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
+const io=context.window.OutdoorDataIO,source=context.window.AHUOutdoorConditions;
+assert.equal(io.validate(source).locations.length,295);assert.equal(source.fields.length,39);
+const book=io.toWorkbook(source),restored=io.fromWorkbook(XLSX.read(XLSX.write(book,{type:'buffer',bookType:'xlsx'}),{type:'buffer'}));
+assert.equal(restored.locations.length,295);assert.equal(restored.locations[0].city,'北京');assert.equal(restored.locations[0].summerAirConditioningWetBulb,26.4);
+const sourceBook=XLSX.read(fs.readFileSync(path.resolve(root,'../../references/室外气象参数/GB50736-2012室外气象参数_jack01_cn修改版.xlsm')),{type:'buffer'});
+const sourceRestored=io.fromWorkbook(sourceBook);assert.equal(sourceRestored.locations.length,295);assert.equal(sourceRestored.locations[294].city,'香港');
+io.save(restored);assert.equal(io.load().locations.length,295);io.clear();assert.equal(io.load().locations.length,295);
+const duplicate=io.clone(source);duplicate.locations.push(io.clone(duplicate.locations[0]));assert.throws(()=>io.validate(duplicate),/重复/);
+const badRH=io.clone(source);badRH.locations[0].winterAirConditioningRH=101;assert.throws(()=>io.validate(badRH),/0–100/);
+console.log('通过：295 条、39 字段室外气象数据库的校验、XLSX 往返、浏览器保存和异常阻断。');

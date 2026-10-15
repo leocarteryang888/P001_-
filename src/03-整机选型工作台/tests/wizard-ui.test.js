@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const html=fs.readFileSync(path.join(path.resolve(__dirname,'..'),'index.html'),'utf8');
+assert.match(html,/兼容迁移入口（非最终软件界面）/);
+assert.match(html,/工业工作台_ThreeJS原型\.html/);
+assert.match(html,/id="export"/);
+assert.match(html,/p001-ahu-project-index-v2/);
+assert.match(html,/download='P001-V2-只读存档导出\.json'/);
+assert.doesNotMatch(html,/data-wizard-step|confirmCreateUnit|loginPassword/);
+assert.doesNotMatch(html,/fetch\([^)]*(PUT|POST)/i);
+console.log('通过：兼容迁移入口仅导出只读 V2 JSON，并指向当前唯一最终工作台。');

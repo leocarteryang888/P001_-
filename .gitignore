@@ -14,3 +14,6 @@ Thumbs.db
 # Local editor settings
 .vscode/
 .idea/
+
+# User-edited shared 3D parts and their revision backups stay on this machine.
+/outputs/04-3D零件库/shared-part-library.json*

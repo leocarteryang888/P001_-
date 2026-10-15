@@ -1,0 +1,97 @@
+/* Fixed industrial workspace: only task panels scroll, never the page. */
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; min-width: 0; }
+body > .toolbar { flex: 0 0 58px; height: 58px; min-height: 58px; width: 100%; overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
+.toolbar > *, .toolbar .actions, .toolbar .actions > * { flex-shrink: 0; }
+.toolbar .brand { flex-shrink: 0; }
+.toolbar label { min-width: 0; }
+.toolbar input { width: 130px; }
+.toolbar .actions { margin-left: auto; flex-wrap: nowrap; }
+.toolbar button, .toolbar .file-button { white-space: nowrap; }
+
+.layout { flex: 1 1 auto; height: calc(100dvh - 58px); min-height: 0; min-width: 0; overflow: hidden; grid-template-columns: 190px minmax(0, 1fr) 230px; }
+.layout > * { min-width: 0; min-height: 0; }
+.sidebar { position: static; height: auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 10px 9px; }
+.sidebar-context { flex: 0 0 auto; margin-bottom: 7px; padding: 7px 8px; }
+.sidebar h2 { flex: 0 0 auto; margin: 7px 5px 4px; }
+.sidebar button { flex: 0 0 auto; margin: 1px 0; padding: 6px 7px; }
+.sidebar .library-heading { margin-top: 7px; padding-top: 7px; }
+.sidebar .segment-palette { flex: 1 1 auto; min-height: 80px; max-height: none; overflow-y: auto; overflow-x: hidden; align-content: start; }
+.sidebar .palette-card { padding: 6px 7px; }
+.sidebar .phase-note { flex: 0 0 auto; margin: 5px 0 0; padding: 5px 4px 0; max-height: 42px; overflow: hidden; line-height: 1.3; }
+
+.layout main { min-width: 0; min-height: 0; height: 100%; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 29%); grid-template-rows: 150px minmax(0, 1fr); gap: 8px; padding: 8px; }
+.layout main > .panel { min-width: 0; min-height: 0; margin: 0; }
+.layout main > .unit-overview-panel { grid-column: 1 / -1; grid-row: 1; padding: 9px 11px; overflow: auto; }
+.unit-overview-panel .section-heading { margin-bottom: 5px; }
+.unit-overview-panel .section-heading h1 { font-size: 15px; margin: 1px 0 3px; }
+.unit-overview-panel .overview-facts { gap: 5px; margin-bottom: 5px; }
+.unit-overview-panel .overview-fact { padding: 4px 6px; }
+.unit-overview-panel .overview-fact small { margin-bottom: 1px; }
+.unit-overview-panel .overview-grid { gap: 5px; }
+.unit-overview-panel .overview-grid > section { padding: 5px 7px; }
+.unit-overview-panel .overview-grid h3 { margin-bottom: 2px; }
+.unit-overview-panel .overview-metric { padding: 2px 0; }
+.unit-overview-panel .overview-lower, .unit-overview-panel .recommendation-bar, .unit-overview-panel .candidate-table { display: none; }
+
+.layout main > #chain { grid-column: 1; grid-row: 2; min-width: 0; min-height: 0; padding: 9px; display: flex; flex-direction: column; overflow: hidden; }
+#chain .section-heading { flex: 0 0 auto; margin-bottom: 4px; }
+#chain .section-heading h2 { font-size: 15px; margin: 0; }
+#chain .canvas-toolbar { flex: 0 0 auto; margin-bottom: 5px; padding: 5px 7px; }
+#chain .segment-chain { flex: 0 0 auto; min-height: 0; height: 84px; padding: 5px; overflow-x: auto; overflow-y: hidden; }
+#chain .segment-card { flex-basis: 122px; min-height: 66px; padding: 5px 7px; }
+#chain .unit-drawing, #chain .three-preview-host { flex: 1 1 auto; min-height: 0; height: auto; margin-top: 5px; }
+#chain .three-preview-host canvas { width: 100%; height: 100%; }
+
+.layout main > #performance { grid-column: 2; grid-row: 2; min-height: 0; overflow-y: auto; padding: 9px; }
+#performance .section-heading { margin-bottom: 6px; }
+#performance .section-heading h2 { font-size: 15px; }
+#performance .section-heading { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 5px; }
+#performance #segmentActions { display: flex; flex-wrap: wrap; gap: 4px; }
+#performance #segmentActions button { padding: 4px 7px; font-size: 11px; }
+#performance .detail-grid { gap: 6px; }
+#performance .detail-box { padding: 7px; }
+
+.layout main > .conditions-panel { grid-column: 1 / -1; grid-row: 2; display: none; }
+.layout main.conditions-open > .conditions-panel { display: block; position: absolute; inset: 8px; z-index: 5; overflow: auto; max-height: none; padding: 12px; border: 1px solid var(--line); }
+.validation-panel { height: 100%; min-height: 0; overflow-y: auto; padding: 10px 9px; }
+.validation-panel .section-heading { padding-bottom: 6px; }
+.validation-panel .section-heading h2 { font-size: 14px; }
+.validation-panel .issue { padding: 7px; margin: 5px 0; }
+.validation-panel .summary { margin-top: 8px; padding-top: 8px; font-size: 11px; }
+
+/* Project center and setup also stay inside the viewport. */
+.project-setup-screen { position: fixed; inset: 0; height: 100dvh; min-height: 0; overflow: hidden; padding: 12px; }
+.project-setup-screen[hidden] { display: none !important; }
+.project-setup-screen .setup-window { width: 100%; max-width: none; height: 100%; min-height: 0; max-height: none; overflow: auto; padding: 16px; }
+.project-manager-screen .setup-window, #projectManagerScreen .setup-window { display: flex; flex-direction: column; }
+.project-manager-screen .manager-grid, #projectManagerScreen .manager-grid { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.project-tree-panel, .project-list-panel { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.project-manager-tree, .project-manager-list { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; }
+
+@media (max-width: 1120px) {
+  .layout { grid-template-columns: 146px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 114px; }
+  .sidebar { grid-column: 1; grid-row: 1 / 3; }
+  .layout main { grid-column: 2; grid-row: 1; grid-template-columns: minmax(0, 1fr) 235px; grid-template-rows: 112px minmax(0, 1fr); }
+  .validation-panel { grid-column: 2; grid-row: 2; height: 114px; display: grid; grid-template-columns: 120px minmax(0, 1fr) 180px; gap: 8px; align-items: start; overflow: hidden; border-top: 1px solid var(--line); }
+  .validation-panel .section-heading { border-bottom: 0; }
+  .validation-panel #validationList { display: flex; gap: 5px; overflow-x: auto; overflow-y: hidden; }
+  .validation-panel .issue { flex: 0 0 180px; margin: 0; }
+  .validation-panel .summary { margin: 0; padding: 0 0 0 7px; border-top: 0; border-left: 1px solid var(--line); }
+  .unit-overview-panel .overview-grid { display: none; }
+  .toolbar { gap: 6px; padding-inline: 8px; }
+  .toolbar input { width: 105px; }
+}
+
+@media (max-width: 680px) {
+  .layout { grid-template-columns: 112px minmax(0, 1fr); }
+  .sidebar { padding: 6px; }
+  .sidebar button { font-size: 10px; padding: 5px 3px; }
+  .layout main { grid-template-columns: minmax(0, 1fr); grid-template-rows: 72px minmax(0, 1fr); }
+  .layout main > #performance { grid-column: 1; grid-row: 2; display: none; }
+  .layout main:has(.sidebar-detail-active) > #chain { display: none; }
+  .unit-overview-panel .overview-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #chain .canvas-toolbar small { display: none; }
+  .validation-panel { grid-template-columns: 96px minmax(0, 1fr); }
+  .validation-panel .summary { display: none; }
+}

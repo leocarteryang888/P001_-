@@ -1,0 +1,651 @@
+/* Option 3 layout for the formal workbench. Reuses the existing project DOM
+   and the formal Three.js renderer; it does not load the demo model. */
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  min-width: 0;
+  color: #273d48;
+  background: #e7edef;
+}
+
+body > .toolbar {
+  flex: 0 0 54px;
+  height: 54px;
+  min-height: 54px;
+  gap: 10px;
+  padding: 0 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 0;
+  border-bottom: 1px solid #284656;
+  border-radius: 0;
+  color: #e8f0f3;
+  background: #112d40;
+  box-shadow: 0 2px 8px #102b3c30;
+}
+
+.toolbar .brand strong,
+.toolbar .brand span,
+.toolbar label,
+.toolbar label input,
+.toolbar label select {
+  color: #e8f0f3;
+}
+
+.toolbar label input,
+.toolbar label select {
+  border-color: #426071;
+  background: #19384b;
+}
+
+.toolbar button,
+.toolbar .file-button {
+  flex-shrink: 0;
+  min-height: 30px;
+  padding: 5px 8px;
+  border-color: #456374;
+  color: #e8f0f3;
+  background: #1a3a4e;
+  white-space: nowrap;
+}
+
+.toolbar button:hover,
+.toolbar .file-button:hover {
+  border-color: #56b6c3;
+  background: #245064;
+}
+
+.toolbar button.primary {
+  border-color: #11a0af;
+  color: #fff;
+  background: #087e91;
+}
+
+.layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: 166px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  width: 100%;
+  height: calc(100dvh - 54px);
+  min-height: 0;
+  overflow: hidden;
+  background: #e7edef;
+}
+
+.layout > .sidebar {
+  grid-column: 1;
+  grid-row: 1;
+  height: 100%;
+  padding: 9px 8px 56px;
+  border: 0;
+  border-right: 1px solid #c6d4d9;
+  border-radius: 0;
+  color: #d9e7eb;
+  background: #173447;
+}
+
+.sidebar-context {
+  border: 1px solid #34576a;
+  border-radius: 3px;
+  background: #1d4054;
+}
+
+.sidebar-context .eyebrow,
+.sidebar-context small {
+  color: #9bb5bf;
+}
+
+.sidebar h2,
+.sidebar .library-heading {
+  color: #e2edf0;
+}
+
+.sidebar button {
+  border-color: transparent;
+  border-radius: 3px;
+  color: #d2e1e5;
+  background: transparent;
+}
+
+.sidebar button:hover,
+.sidebar button.nav-active {
+  border-color: #2c8393;
+  color: #fff;
+  background: #205064;
+}
+
+.sidebar button small,
+.sidebar .phase-note {
+  color: #9db5bd;
+}
+
+.sidebar .segment-palette {
+  padding: 4px;
+  border: 1px solid #315366;
+  border-radius: 3px;
+  background: #112b3b;
+}
+
+.sidebar .palette-card {
+  border-color: #436374;
+  border-radius: 3px;
+  color: #dbe8eb;
+  background: #1b3b4e;
+}
+
+.sidebar .palette-card:hover {
+  border-color: #51b4c0;
+  background: #245267;
+}
+
+.layout > main {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(220px, .88fr) minmax(260px, .94fr);
+  grid-template-rows: 64px minmax(0, 1fr);
+  gap: 7px;
+  height: 100%;
+  min-height: 0;
+  padding: 7px 8px 53px;
+  overflow: hidden;
+}
+
+.layout main > .unit-overview-panel,
+.layout main > .conditions-panel {
+  display: none;
+}
+
+.layout:has(.sidebar .nav-active[data-target="unitOverview"]) main > .unit-overview-panel {
+  position: absolute;
+  z-index: 4;
+  inset: 8px 8px 53px;
+  display: block;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #bdcbd0;
+  background: #f8fafb;
+}
+
+.layout main.conditions-open > .conditions-panel {
+  position: absolute;
+  z-index: 5;
+  inset: 8px 8px 53px;
+  display: block;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #bdcbd0;
+  background: #f8fafb;
+}
+
+/* Flatten the existing chain wrapper so its segment strip spans all three
+   work areas while the renderer remains in the left work area below it. */
+.layout main > #chain {
+  display: contents;
+}
+
+#chain > .canvas-toolbar {
+  display: none;
+}
+
+#chain > .section-heading {
+  position: absolute;
+  z-index: 8;
+  top: 11px;
+  right: calc(33% + 14px);
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+#chain > .section-heading > div:first-child {
+  display: none;
+}
+
+#chain #segmentTrash {
+  display: block;
+  padding: 3px 7px;
+  border: 1px solid #e3b9b0;
+  border-radius: 2px;
+  color: #a54b3c;
+  background: #fff8f6;
+  font-size: 9px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+#chain > #segmentChain {
+  grid-column: 1 / 3;
+  grid-row: 1;
+  display: flex;
+  align-self: stretch;
+  width: 100%;
+  height: 64px;
+  min-height: 64px;
+  margin: 0;
+  padding: 6px;
+  overflow: auto hidden;
+  border: 1px solid #b9cbd0;
+  border-radius: 3px;
+  background: #f2f6f7;
+}
+
+#chain .segment-card {
+  flex: 0 0 126px;
+  min-height: 50px;
+  padding: 5px 8px;
+  border: 1px solid #b8c8cd;
+  border-top: 3px solid #77949e;
+  border-radius: 2px;
+  background: #fbfdfd;
+}
+
+#chain .segment-card.selected {
+  border-color: #12a0b0;
+  border-top-color: #12a0b0;
+  background: #d9f0f2;
+}
+
+#chain .segment-card strong {
+  margin: 7px 0 2px;
+  color: #29434e;
+  font-size: 11px;
+}
+
+#chain .segment-card span {
+  color: #617982;
+  font-size: 9px;
+}
+
+#chain > #unitDrawing {
+  grid-column: 1;
+  grid-row: 2;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #bdcbd0;
+  border-radius: 3px;
+  background: #eaf2f4;
+}
+
+#chain #unitDrawing canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#chain #unitDrawing .formal-three-view-toggle {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  right: 12px;
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px solid #8eabb1;
+  border-radius: 3px;
+  background: #ffffffed;
+  color: #31515a;
+  font: 12px/1.4 "Microsoft YaHei", sans-serif;
+  cursor: pointer;
+}
+
+#chain #unitDrawing .formal-three-view-toggle:hover,
+#chain #unitDrawing .formal-three-view-toggle:focus-visible {
+  border-color: #168c9a;
+  background: #e1f3f4;
+  outline: 2px solid #168c9a55;
+}
+
+.layout main > #engineeringReview {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: 34px minmax(130px, .9fr) 30px minmax(110px, 1.1fr) 30px;
+  gap: 5px;
+  min-height: 0;
+  padding: 7px;
+  overflow: hidden;
+  border: 1px solid #bdcbd0;
+  border-radius: 3px;
+  background: #f8fafb;
+}
+
+.engineering-drawing {
+  background-color: #f7fafb;
+  background-size: 16px 16px;
+}
+
+.layout main > #performance {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  min-height: 0;
+  padding: 9px;
+  overflow: auto;
+  border: 1px solid #bdcbd0;
+  border-radius: 3px;
+  background: #f8fafb;
+}
+
+.layout main > #performance > .section-heading {
+  position: sticky;
+  top: -9px;
+  z-index: 2;
+  margin: -9px -9px 7px;
+  padding: 8px 9px;
+  border-bottom: 1px solid #c9d7db;
+  background: #f8fafb;
+}
+
+#performance .section-heading h2 {
+  font-size: 14px;
+}
+
+#performance .interface-tabs span {
+  border-radius: 2px;
+  background: #edf3f4;
+}
+
+#performance .interface-tabs span.active {
+  color: #087e91;
+  background: #d9eff1;
+}
+
+#performance .detail-box {
+  border: 1px solid #d1dcdf;
+  border-radius: 3px;
+  background: #fff;
+}
+
+.layout > .validation-panel {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: 0;
+  left: 166px;
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr) 170px;
+  height: 46px;
+  min-height: 46px;
+  padding: 4px 8px;
+  border: 0;
+  border-top: 1px solid #c2d0d4;
+  border-radius: 0;
+  background: #f0f4f5;
+}
+
+.validation-panel .summary {
+  max-height: 38px;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+
+  .layout > main {
+    grid-template-columns: minmax(0, 1fr) minmax(210px, .85fr);
+    grid-template-rows: 60px minmax(0, 1fr);
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  #chain > #segmentChain {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  #chain > .section-heading {
+    top: 10px;
+    right: 12px;
+  }
+
+  #chain > #unitDrawing {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .layout main > #engineeringReview {
+    display: none;
+  }
+
+  .layout main > #performance {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+
+  .layout:has(.sidebar .nav-active[data-target="engineeringReview"]) main > #engineeringReview {
+    display: grid;
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .layout:has(.sidebar .nav-active[data-target="engineeringReview"]) #chain > #unitDrawing {
+    display: none;
+  }
+
+  .layout:has(.sidebar .nav-active[data-target="engineeringReview"]) main > #performance {
+    display: none;
+  }
+
+  .layout:has(.sidebar .nav-active[data-target="performance"]) main > #performance {
+    display: block;
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .layout:has(.sidebar .nav-active[data-target="performance"]) #chain > #unitDrawing {
+    display: none;
+  }
+
+  .layout > .validation-panel {
+    left: 140px;
+    grid-template-columns: 88px minmax(0, 1fr) 132px;
+  }
+}
+
+@media (max-width: 760px) {
+  .toolbar .actions {
+    margin-left: 0;
+  }
+
+  .layout {
+    grid-template-columns: 112px minmax(0, 1fr);
+  }
+
+  .layout > main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 56px minmax(0, 1fr);
+  }
+
+  #chain > #segmentChain {
+    grid-column: 1;
+  }
+
+  #chain > .section-heading {
+    right: 10px;
+  }
+
+  .layout main > #performance {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .layout main > #engineeringReview,
+  .layout main > #performance {
+    display: none;
+  }
+
+  .layout main > #performance {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .layout:has(.sidebar .nav-active[data-target="engineeringReview"]) main > #engineeringReview {
+    display: grid;
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .layout:has(.sidebar .nav-active[data-target="engineeringReview"]) #chain > #unitDrawing,
+  .layout:has(.sidebar .nav-active[data-target="engineeringReview"]) main > #performance {
+    display: none;
+  }
+
+  .layout:has(.sidebar .nav-active[data-target="performance"]) main > #performance {
+    display: block;
+  }
+
+  .layout:has(.sidebar .nav-active[data-target="performance"]) #chain > #unitDrawing {
+    display: none;
+  }
+
+  .layout > .validation-panel {
+    left: 112px;
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .validation-panel .summary {
+    display: none;
+  }
+}
+
+/* Option 3 stage navigation and temporary segment-library drawer. */
+.option3-stagebar {
+  z-index: 5;
+  display: flex;
+  flex: 0 0 38px;
+  align-items: stretch;
+  justify-content: space-between;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border-bottom: 1px solid #2b4a5a;
+  color: #cfdee3;
+  background: #19384b;
+}
+
+.option3-stage-tabs {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.option3-stage,
+.option3-library-toggle {
+  flex: 0 0 auto;
+  min-width: 110px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: #c6d8de;
+  background: transparent;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.option3-stage:hover,
+.option3-library-toggle:hover {
+  color: #fff;
+  background: #22485c;
+}
+
+.option3-stage.active {
+  border-bottom-color: #22b6c2;
+  color: #fff;
+  background: #1d4559;
+}
+
+.option3-library-toggle {
+  min-width: 130px;
+  margin-left: 8px;
+  border-left: 1px solid #355568;
+  color: #d9e7eb;
+}
+
+.layout {
+  flex: 1 1 auto;
+  width: 100%;
+  height: calc(100dvh - 92px);
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.layout > .sidebar {
+  position: absolute;
+  z-index: 7;
+  top: 0;
+  bottom: 46px;
+  left: 0;
+  width: 220px;
+  height: auto;
+  padding-bottom: 10px;
+  overflow: hidden;
+  box-shadow: 8px 0 24px #112d403b;
+  transform: translateX(-105%);
+  transition: transform 160ms ease;
+  visibility: hidden;
+}
+
+.layout.option3-library-open > .sidebar {
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.layout > main {
+  grid-column: 1;
+  grid-template-columns: minmax(0, 52fr) minmax(0, 29fr) minmax(230px, 19fr);
+}
+
+.layout > .validation-panel {
+  left: 0;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .layout > main {
+    grid-column: 1;
+  }
+
+  .layout > .validation-panel {
+    left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .option3-stagebar {
+    height: 36px;
+    flex-basis: 36px;
+    padding: 0 3px;
+  }
+
+  .option3-stage,
+  .option3-library-toggle {
+    min-width: auto;
+    padding-inline: 8px;
+    font-size: 10px;
+  }
+
+  .option3-library-toggle {
+    margin-left: 2px;
+  }
+
+  .layout {
+    height: calc(100dvh - 90px);
+  }
+}
