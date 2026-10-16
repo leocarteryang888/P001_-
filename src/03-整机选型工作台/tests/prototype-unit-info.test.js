@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ui = fs.readFileSync(path.join(__dirname, '../js/prototype-project-ui.js'), 'utf8');
-const html = fs.readFileSync(path.resolve(__dirname, '../../../outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html'), 'utf8');
+const { readFinalWorkbenchSource } = require('./helpers/final-workbench-source');
+const html = readFinalWorkbenchSource();
 
 for (const [id, title, hint] of [
   ['F1', '单层单路', '左进右出'],

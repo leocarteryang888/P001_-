@@ -6,7 +6,7 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $server = Join-Path $PSScriptRoot 'serve-three-prototype.js'
 $runtimeDirectory = Join-Path $projectRoot 'outputs/03-整机选型工作台'
 $launcherLog = Join-Path $runtimeDirectory 'workbench-launcher.log'
-$htmlFile = Join-Path $runtimeDirectory '工业工作台_ThreeJS原型.html'
+$htmlFile = Join-Path $projectRoot 'src/03-整机选型工作台/index.html'
 $health = 'http://127.0.0.1:8765/health'
 $url = 'http://127.0.0.1:8765/%E5%B7%A5%E4%B8%9A%E5%B7%A5%E4%BD%9C%E5%8F%B0_ThreeJS%E5%8E%9F%E5%9E%8B.html'
 

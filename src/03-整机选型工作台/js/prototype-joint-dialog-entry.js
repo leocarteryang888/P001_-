@@ -1,0 +1,1 @@
+document.querySelector('.composition-title').insertAdjacentHTML('beforeend','<button type="button" id="jointDetailBtn">护板节点</button>');document.getElementById('jointDetailBtn').addEventListener('click',()=>document.getElementById('jointDialog').showModal());document.getElementById('jointClose').addEventListener('click',()=>document.getElementById('jointDialog').close());

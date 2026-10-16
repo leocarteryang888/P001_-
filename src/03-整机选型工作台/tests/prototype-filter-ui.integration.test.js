@@ -28,7 +28,7 @@ assert.ok(projectUiSource.includes("dialog.querySelector('[data-section-mode][va
 assert.ok(projectUiSource.includes('送风量待填，名义截面风速示值未计算'),'manual nonstandard section confirmation must tolerate missing airflow');
 assert.match(projectUiSource,/const nominalFaceVelocityMps=airVolume>0\?window\.CoilSelector\.calculateNominalFaceVelocity\([\s\S]*?\)\.nominalFaceVelocityMps:null;/,'manual dimensions may be confirmed without airflow and must not call the velocity calculator with an empty/zero flow');
 assert.ok(projectUiSource.includes("meta={source:'manual',status:'user-confirmed',method:'manual-nonstandard',nominalFaceVelocityMps}"),'manual confirmation stores a null velocity when airflow is absent instead of throwing');
-const finalHtml=fs.readFileSync(path.resolve(__dirname,'../../../outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html'),'utf8');
+const finalHtml=fs.readFileSync(path.resolve(__dirname,'../../../src/03-整机选型工作台/index.html'),'utf8');
 assert.ok(finalHtml.indexOf('data/coil-section-database.js')<finalHtml.indexOf('js/coil-selector.js'),'workbench must load section source data before the specialist selector');
 assert.ok(!projectUiSource.includes('标准截面列表尚未导入'),'obsolete no-candidate placeholder must be removed');
 const project = { projectId: 'p-ui-1', code: 'P-UI', units: [] };

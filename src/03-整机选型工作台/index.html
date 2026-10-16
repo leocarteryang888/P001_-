@@ -1,8 +1,46 @@
 <!doctype html>
-<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>P001 整机工作台入口</title>
-<style>body{font:16px/1.6 system-ui,"Microsoft YaHei",sans-serif;max-width:720px;margin:12vh auto;padding:24px;color:#23414a;background:#f2f7f7}main{padding:28px;background:white;border:1px solid #c8d9dd;border-radius:12px}button,a{display:inline-block;margin:8px 8px 0 0;padding:10px 16px;border:0;border-radius:6px;background:#087f8c;color:white;text-decoration:none;cursor:pointer;font:inherit}.secondary{background:#55727b}#status{font-size:14px;color:#57717a}</style>
-<main><h1>兼容迁移入口（非最终软件界面）</h1><p>整机项目管理与机组编辑已统一到 Three.js 工作台。正式项目存档保持只读；可在统一工作台中选择正式机组并导入可编辑副本。</p><p id="status">正在检查 file:// 来源的旧 V2 存档……</p><button id="export" class="secondary" type="button">导出此 file:// 浏览器的 V2 存档</button><a href="http://127.0.0.1:8765/工业工作台_ThreeJS原型.html">打开当前唯一最终版工作台</a><p>如果本地服务未运行，请先启动 tools/打开整机选型工作台.bat。导出的 JSON 可在统一工作台的“从 V2 JSON 导入副本”操作中导入。</p></main>
-<script>
-const status=document.getElementById('status');let hasData=false;try{hasData=!!(localStorage.getItem('p001-ahu-project-index-v2')||localStorage.getItem('p001-ahu-project-v2'));status.textContent=hasData?'检测到此 file:// 来源有正式 V2 存档。请先导出 JSON，再进入统一工作台。':'此来源未检测到可读取的 V2 存档；可以直接进入统一工作台。'};}catch{status.textContent='浏览器禁止读取 file:// localStorage。请在原正式工作台可访问的浏览器配置中导出项目 JSON，再从统一工作台导入。'}
-document.getElementById('export').addEventListener('click',()=>{try{const payload={projectIndex:JSON.parse(localStorage.getItem('p001-ahu-project-index-v2')||'[]'),currentProject:JSON.parse(localStorage.getItem('p001-ahu-project-v2')||'null')};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='P001-V2-只读存档导出.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);status.textContent='已导出 JSON。文件可在统一工作台中导入为副本，原 V2 存档未修改。';}catch(error){status.textContent='导出失败：'+error.message;}});
-</script></html>
+<html lang="zh-CN">
+<head>
+<script src="/src/03-整机选型工作台/js/prototype-segment-fields.js"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AHU 工业工作台 · 最终版本</title>
+<script type="importmap">{"imports":{"three":"/src/03-整机选型工作台/vendor/three/build/three.module.js","three/addons/":"/src/03-整机选型工作台/vendor/three/examples/jsm/"}}</script>
+<link rel="stylesheet" href="/src/03-整机选型工作台/css/prototype-workbench-base.css">
+<link rel="stylesheet" href="/src/03-整机选型工作台/css/prototype-workbench-components.css">
+
+
+<link rel="stylesheet" href="/src/03-整机选型工作台/css/prototype-workbench-overrides.css">
+
+
+
+
+
+
+<script src="/src/03-整机选型工作台/js/prototype-unit-info-validator.js"></script>
+</head>
+<body><div id="outputScroll" hidden></div><div class="app">
+<header class="top"><div class="logo"><i>AHU</i>无框架箱体设计</div><div class="crumb" id="crumb">Three.js 原型 · 独立演示</div><div class="actions"><button class="btn" id="homeBtn" hidden>项目管理</button><button class="btn secondary" id="newUnitBtn" hidden>新建机组</button><button class="btn secondary" id="saveBtn" hidden>保存草稿</button><button class="btn primary" id="drawBtn" hidden>图纸输出</button><button class="btn" id="demoModeBtn" type="button" hidden>返回原型演示</button><button class="btn" id="partsLibraryBtn" type="button">3D 零件编辑库</button><button class="btn" id="projectEditorMax" type="button" hidden aria-label="最大化编辑器">最大化</button><button class="btn" id="projectEditorMin" type="button" hidden aria-label="最小化编辑器">最小化</button><button class="btn fullscreen-exit" id="fullscreenBtn" type="button" aria-label="退出全屏" title="退出全屏" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3H3v4M13 3h4v4M3 13v4h4M17 13v4h-4"/></svg></button></div></header>
+<section class="screen manager" id="manager"><aside><div class="sidehead"><div class="side-title-row"><h2>项目管理</h2><button class="btn light" id="addProject" type="button">＋ 新建项目</button></div></div><input id="projectSearch" type="search" placeholder="搜索项目、编号或客户"><div class="project-tree" id="projectTree"></div></aside><main><div class="manager-head"><div class="project-title-block"><h1 id="projectName">项目中心</h1><p id="projectSubtitle"></p></div><div class="project-summary"><div class="metric"><small>项目名称</small><b id="metricCode">—</b></div><div class="metric"><small>销售公司</small><b id="metricUnits">—</b></div><div class="metric"><small>项目编号</small><b id="metricPhase">—</b></div><div class="metric"><small>业务负责人</small><b id="metricState">—</b></div></div></div><div class="unit-area"><div class="area-head"><span>机组列表</span><button class="btn light" id="addUnit" onclick="window.addPrototypeUnit&&window.addPrototypeUnit()">＋ 新建机组</button></div><div class="unit-table" id="unitTable"></div></div></main></section>
+<section class="screen workspace" id="workspace" hidden><nav class="stages" aria-label="任务导航"><button class="stage" data-stage="机组资料">机组资料</button><button class="stage active" data-stage="功能段配置">功能段配置</button><button class="stage" data-stage="检查与复核">检查与复核</button><button class="stage" data-stage="图纸预览">图纸预览</button></nav><div class="workspace-grid" id="workspaceGrid">
+<aside class="palette" id="palette"><div class="pane-head"><b>功能段库</b><small>拖拽添加 →</small></div><div class="palette-note">从列表拖入中央组合区；段卡片可继续拖拽排序。</div><div class="palette-groups" id="paletteGroups"></div><div class="library-foot">当前段序与气流方向一致。点击中央段卡片可在右侧编辑输入。</div></aside>
+<main class="center" id="center"><div class="center-head"><strong>机组段序与结构预览</strong><span class="hint" id="compositionMeta"></span><div class="view-controls" id="viewControls"><button data-view="side" class="active">侧视</button><button data-view="top">俯视</button><button data-view="end">端视</button><button data-view="six">六面图</button></div></div><div class="composition"><div class="composition-title"><b>功能段组合区</b><span>拖入添加 · 拖动排序 · 点击编辑</span></div><div class="dropzone" id="dropzone" aria-label="功能段组合区"></div><div class="view-area" id="viewArea"></div></div></main>
+<aside class="inputs" id="inputs"><div class="pane-head"><b id="inputTitle">功能段输入项</b><small>当前段 · 表单滚动</small></div><div class="input-scroll"><div class="input-grid" id="inputGrid"></div><div class="input-actions"><small id="inputNotice">修改输入后需重新确认本段</small><button class="btn primary" id="confirmSegment">确认当前段数据</button></div></div></aside><div class="stage-placeholder" id="stagePlaceholder" hidden><div class="card"><h2 id="placeholderTitle"></h2><p id="placeholderText"></p></div></div>
+</div></section>
+<dialog class="formal-dialog" id="formalProjectDialog"><header><h2>正式方案</h2><p>读取只读预览，或把所选机组映射为原型项目副本。正式 V2 数据始终只读保留；专业七段式计算结果不导入。</p></header><div class="dialog-body"><label>正式项目<select id="formalProjectSelect"></select></label><label>机组<select id="formalUnitSelect"></select></label><p id="formalReadNotice" role="status"></p></div><footer><button class="btn light" id="formalDialogCancel" type="button">取消</button><button class="btn" id="formalDialogImport" type="button">导入所选机组副本</button><button class="btn primary" id="formalDialogLoad" type="button">载入只读视图</button></footer></dialog>
+<footer class="status"><span id="statusLocation">项目中心</span><span id="statusDims">—</span><span id="statusCount">—</span><span id="statusConfirm">—</span><span class="push">DOM 交互原型 V2 · 示意数据</span></footer>
+</div>
+<script src="/src/03-整机选型工作台/js/prototype-workbench-bootstrap.js"></script>
+<script src="/src/03-整机选型工作台/js/prototype-drawing-revision.js"></script>
+<script src="/src/03-整机选型工作台/js/prototype-axonometric-scene.js"></script>
+<script src="/src/03-整机选型工作台/js/prototype-output-panel.js"></script>
+<script type="module" src="/src/03-整机选型工作台/js/three-preview.js"></script>
+<dialog class="joint-dialog" id="jointDialog" aria-label="护板节点结构示意"><div class="joint-head"><b>护板节点结构示意 · 50W</b><button type="button" id="jointClose">关闭</button></div><div class="joint-body"><img id="jointDrawing" src="/src/03-整机选型工作台/assets/profile-nodes-50w.png" alt="50W一二三号型材截面及一加二、二加三装配节点图"><p>50W节点几何按用户提供的型材图及配合装配图.dwg生成，并在示意模型中查看方向关系；不代表当前正式方案或实物已完成校核。</p></div></dialog>
+<script src="/src/03-整机选型工作台/js/prototype-profile-assets.js"></script><script src="/src/03-整机选型工作台/js/prototype-joint-dialog-entry.js"></script>
+<script src="/src/03-整机选型工作台/js/prototype-parts-navigation.js"></script>
+<script src="/src/03-整机选型工作台/data/outdoor-conditions.js"></script><script src="/src/03-整机选型工作台/js/prototype-weather.js"></script>
+<script src="/src/01-过滤器选型/data/filter-database.js"></script><script src="/src/01-过滤器选型/js/filter-data-io.js"></script><script src="/src/02-盘管选型/data/coil-database.js"></script><script src="/src/02-盘管选型/data/coil-section-database.js"></script><script src="/src/02-盘管选型/js/coil-data-io.js"></script><script src="/src/02-盘管选型/js/coil-selector.js"></script><script src="/src/03-整机选型工作台/js/prototype-project-store.js"></script><script src="/src/03-整机选型工作台/js/selection-handoff.js"></script><script src="/src/03-整机选型工作台/js/prototype-selection-handoff.js"></script><script src="/src/03-整机选型工作台/js/prototype-selection-ui.js"></script><script src="/src/03-整机选型工作台/js/prototype-airflow-compat.js"></script><script src="/src/03-整机选型工作台/js/prototype-project-ui.js"></script><script src="/src/03-整机选型工作台/js/prototype-professional-actions.js"></script>
+<script src="/src/03-整机选型工作台/js/prototype-interaction-overrides.js"></script>
+<script src="/src/03-整机选型工作台/js/prototype-workbench-mode.js"></script><script src="/src/03-整机选型工作台/js/prototype-drawing-bridge.js"></script><script src="/src/03-整机选型工作台/js/prototype-cad-inputs.js"></script><script src="/src/03-整机选型工作台/js/prototype-drawing.js"></script><script src="/src/03-整机选型工作台/js/current-version-badge.js"></script></body></html>
+
+
+\n

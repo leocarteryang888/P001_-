@@ -3,20 +3,21 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
-const root = path.resolve(__dirname, '..', 'outputs', '03-整机选型工作台');
+const root = path.resolve(__dirname, '..', 'src', '03-整机选型工作台');
+const runtimeRoot = path.resolve(__dirname, '..', 'outputs', '03-整机选型工作台');
 const partRoot = path.resolve(__dirname, '..', 'src', '04-3D零件库');
 const srcRoot = path.resolve(__dirname, '..', 'src');
 const defaultPartDataFile = path.resolve(__dirname, '..', 'outputs', '04-3D零件库', 'shared-part-library.json');
-const defaultPrototypeProjectsFile = path.resolve(__dirname, '..', 'outputs', '03-整机选型工作台', 'shared-prototype-projects.json');
+const defaultPrototypeProjectsFile = path.resolve(runtimeRoot, 'shared-prototype-projects.json');
 const professionalModules = new Set(['01-过滤器选型', '02-盘管选型', '03-整机选型工作台']);
 const port = 8765;
 const maxBodyBytes = 16 * 1024 * 1024;
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.png': 'image/png' };
-const workbenchFile = path.resolve(root, '工业工作台_ThreeJS原型.html');
+const workbenchFile = path.resolve(root, 'index.html');
 
 function resolveServedFile(requestPath) {
   const normalized = requestPath.replace(/^\/+/, '');
-  if (normalized === '工业工作台_ThreeJS原型.html') return workbenchFile;
+  if (normalized === '工业工作台_ThreeJS原型.html' || normalized === 'index.html') return workbenchFile;
   if (normalized.startsWith('src/')) {
     const [moduleName, ...parts] = normalized.slice(4).split('/');
     if (!professionalModules.has(moduleName)) return null;
@@ -41,15 +42,15 @@ function collectWorkbenchDependencies() {
     if (mappedKey) reference = `${importMap[mappedKey]}${reference.slice(mappedKey.length)}`;
     let target;
     try {
-      const base = sourceFile === workbenchFile ? '/工业工作台_ThreeJS原型.html' : `/${path.relative(root, sourceFile).split(path.sep).join('/')}`;
+      const base = sourceFile === workbenchFile ? '/src/03-整机选型工作台/index.html' : `/${path.relative(root, sourceFile).split(path.sep).join('/')}`;
       const route = new URL(reference, `http://127.0.0.1${base}`).pathname;
       target = resolveServedFile(decodeURIComponent(route));
     } catch { return; }
     if (!target || !target.startsWith(path.resolve(__dirname, '..') + path.sep) || !fs.existsSync(target)) return;
     const ext = path.extname(target).toLowerCase();
-    if (!['.js', '.css', '.html'].includes(ext) || files.has(target)) return;
+    if (!['.js', '.css', '.html', '.png', '.svg', '.webp', '.jpg', '.jpeg'].includes(ext) || files.has(target)) return;
     files.add(target);
-    if (ext === '.js' || ext === '.html') pending.push(target);
+    if (ext === '.js' || ext === '.html' || ext === '.css') pending.push(target);
   };
   while (pending.length) {
     const file = pending.shift();
@@ -59,6 +60,10 @@ function collectWorkbenchDependencies() {
     for (const match of source.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi)) refs.push(match[1]);
     if (file.endsWith('.js')) {
       for (const match of source.matchAll(/(?:from\s*["']|import\s*\(\s*["'])([^"']+)["']/g)) refs.push(match[1]);
+      for (const match of source.matchAll(/["']((?:\/src\/|\.\.?\/)[^"']+\.(?:png|svg|webp|jpe?g))["']/gi)) refs.push(match[1]);
+    }
+    if (file.endsWith('.css')) {
+      for (const match of source.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/gi)) refs.push(match[1]);
     }
     refs.forEach(reference => addReference(file, reference));
   }
@@ -314,7 +319,9 @@ function createServer(options = {}) {
       cleanPath = modulePath.join('/');
     } else {
       selectedRoot = root;
-      cleanPath = pathname.replace(/^\/+/, '');
+      cleanPath = pathname === '/工业工作台_ThreeJS原型.html'
+        ? 'index.html'
+        : pathname.replace(/^\/+/, '');
     }
     if (!cleanPath) cleanPath = 'index.html';
     const relative = cleanPath.split('/').join(path.sep);

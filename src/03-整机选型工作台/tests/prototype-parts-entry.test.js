@@ -3,15 +3,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const html = fs.readFileSync(path.resolve(__dirname, '../../../outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html'), 'utf8');
+const { readFinalWorkbenchSource } = require('./helpers/final-workbench-source');
+const html = readFinalWorkbenchSource();
 assert.doesNotMatch(html, /\.app\.editor-mode[^{}]*#partsLibraryBtn|\.top[^{}]*#partsLibraryBtn/, 'global/editor CSS must not hide the part-library entry');
 assert.match(html, /id="partsLibraryBtn"[^>]*>3D 零件编辑库<\/button>/, 'final workbench must declare the visible part-library control');
 const projectUi = fs.readFileSync(path.resolve(__dirname, '../js/prototype-project-ui.js'), 'utf8');
 assert.doesNotMatch(projectUi, /\$\('partsLibraryBtn'\)\.hidden\s*=\s*true/, 'project editor must not hide the global part-library entry');
 assert.match(projectUi, /actions\.prepend\(\$\('homeBtn'\)\)[\s\S]*?actions\.prepend\(partsLink\)/, 'workbench must place the part-library entry before project management');
-const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]);
-const entry = scripts.find(script => script.includes('const partsLibraryLink='));
-assert.ok(entry, 'final workbench must install the part-library link');
+const entry = fs.readFileSync(path.join(__dirname, '../js/prototype-parts-navigation.js'), 'utf8');
+assert.ok(entry.includes('const partsLibraryLink='), 'final workbench must install the part-library link');
 for (const protocol of ['http:', 'file:']) {
   let replacement;
   const button = { id: 'partsLibraryBtn', className: 'btn', textContent: '3D 零件编辑库', replaceWith: link => { replacement = link; } };

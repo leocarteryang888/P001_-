@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '../../..');
-const html = fs.readFileSync(path.join(root, 'outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html'), 'utf8');
+const { readFinalWorkbenchSource } = require('./helpers/final-workbench-source');
+const html = readFinalWorkbenchSource();
 const ui = fs.readFileSync(path.join(__dirname, '../js/prototype-project-ui.js'), 'utf8');
 
 const searchHelper = ui.match(/function projectMatchesSearch\(project, query, airflowOptions\) \{[\s\S]*?\n  \}/)?.[0];

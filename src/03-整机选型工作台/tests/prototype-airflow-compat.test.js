@@ -21,7 +21,7 @@ assert.equal(compat.resolve({ airflow: '约26000 m³/h' }), '', 'ambiguous legac
 const ui = fs.readFileSync(path.join(__dirname, '../js/prototype-project-ui.js'), 'utf8');
 assert.ok(ui.includes("if (key === 'airVolume') return window.AHUPrototypeAirflowCompat?.resolve(unit) ?? ''"),
   'workbench reads airflow through the compatibility resolver');
-const html = fs.readFileSync(path.resolve(__dirname, '../../../outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html'), 'utf8');
+const html = fs.readFileSync(path.resolve(__dirname, '../../../src/03-整机选型工作台/index.html'), 'utf8');
 assert.ok(html.indexOf('js/prototype-airflow-compat.js') < html.indexOf('js/prototype-project-ui.js'),
   'airflow compatibility helper must load before the workbench controller');
 

@@ -5,13 +5,13 @@ import path from 'node:path';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../..');
-const previewPath = path.join(root, 'outputs/03-整机选型工作台/three-preview.js');
-const threePath = path.join(root, 'outputs/03-整机选型工作台/three-vendor/build/three.module.js');
+const previewPath = path.join(root, 'src/03-整机选型工作台/js/three-preview.js');
+const threePath = path.join(root, 'src/03-整机选型工作台/vendor/three/build/three.module.js');
 const THREE = await import(pathToFileURL(threePath).href);
 const source = await readFile(previewPath, 'utf8');
-const html = await readFile(path.join(root,'outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html'),'utf8');
-const dimensionsDeclaration = html.match(/^function previewDimensionsMm\(\).*$/m)?.[0];
-assert.ok(dimensionsDeclaration,'actual HTML dimensions resolver exists');
+const scene = await readFile(path.join(root,'src/03-整机选型工作台/js/prototype-axonometric-scene.js'),'utf8');
+const dimensionsDeclaration = scene.match(/^function previewDimensionsMm\(\).*$/m)?.[0];
+assert.ok(dimensionsDeclaration,'actual workbench bootstrap dimensions resolver exists');
 const actualDimensions = new Function('formalReadonly','formalInfo','projects','selectedProject','selectedUnit',`${dimensionsDeclaration}; return previewDimensionsMm();`);
 for(const value of [Infinity,'Infinity','NaN','abc',null,'',0,-1]) {
   const result = actualDimensions(false,{},[{units:[{designConditions:{cabinetWidth:{value},cabinetHeight:{value}}}]}],0,0);

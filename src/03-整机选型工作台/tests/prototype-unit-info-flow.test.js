@@ -6,8 +6,9 @@ const validator = require('../js/prototype-unit-info-validator.js');
 const weather = require('../js/prototype-weather.js');
 const airflow = require('../js/prototype-airflow-compat.js');
 const handoff = require('../js/prototype-selection-handoff.js');
-const source = fs.readFileSync(path.join(__dirname, '../js/prototype-project-ui.js'), 'utf8');
-const html = fs.readFileSync(path.join(__dirname, '../../../outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+const { readFinalWorkbenchSource } = require('./helpers/final-workbench-source');
+const source = readFinalWorkbenchSource();
 // Extract complete actual declarations with brace, comment and literal tracking.
 // Regex locates a declaration only; it never determines a function's end.
 function declaration(name) {
@@ -130,8 +131,9 @@ test('static readonly metadata select contract disables cabinet and installation
   for (const key of ['cabinetSeries', 'installationLocation']) assert.match(card, new RegExp(`<select data-unit-meta="${key}"[^>]*\\$\\{formalReadonly\\?'disabled':''\\}`), key);
 });
 test('static radio CSS keeps 14px controls outside 34px field cascade', () => {
-  assert.match(html, /\.airflow-form-option input\{[^}]*width:14px;[^}]*height:14px/);
-  assert.match(html, /\.app #stagePlaceholder \.unit-overview input:not\(\[type="radio"\]\):not\(\[type="checkbox"\]\),\s*\.app #stagePlaceholder \.unit-overview select\{height:34px!important/);
+  const css = fs.readFileSync(path.join(__dirname, '../css/prototype-workbench-components.css'), 'utf8') + fs.readFileSync(path.join(__dirname, '../css/prototype-workbench-overrides.css'), 'utf8');
+  assert.match(css, /\.airflow-form-option input\{[^}]*width:14px;[^}]*height:14px/);
+  assert.match(css, /\.app #stagePlaceholder \.unit-overview input:not\(\[type="radio"\]\):not\(\[type="checkbox"\]\),\s*\.app #stagePlaceholder \.unit-overview select\{height:34px!important/);
 });
 module.exports = { fixture, declaration, blockAt, source, clone, node, weatherKeys };
 if (require.main === module) (async () => { let failed = 0; for (const t of tests) { try { await t.run(); console.log(`PASS ${t.name}`); } catch (e) { failed++; console.error(`FAIL ${t.name}\n${e.stack}`); } } console.log(`UI checks: ${tests.length - 3} actual function behavior cases + 3 static contracts; ${tests.length - failed} passed, ${failed} failed. Fake DOM/store only; no browser visual verification.`); if (failed) process.exitCode = 1; })();

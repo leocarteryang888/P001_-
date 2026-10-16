@@ -3,8 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const htmlPath = path.join(__dirname, '../../../outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html');
-const source = fs.readFileSync(htmlPath, 'utf8');
+const htmlPath = path.join(__dirname, '../../../src/03-整机选型工作台/index.html');
+const { readFinalWorkbenchSource } = require('./helpers/final-workbench-source');
+const source = readFinalWorkbenchSource();
 const uiSource = fs.readFileSync(path.join(__dirname, '../js/prototype-project-ui.js'), 'utf8');
 
 function blockAt(open, text = source) {

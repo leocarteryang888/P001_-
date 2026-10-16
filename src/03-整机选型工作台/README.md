@@ -1,5 +1,11 @@
 # 整机选型工作台
 
+## 2026-10-16 当前源码入口（03-0 源码治理）
+
+当前唯一维护页面为 [`src/03-整机选型工作台/index.html`](index.html)，服务器根路径 `/` 和兼容旧地址 `/工业工作台_ThreeJS原型.html` 都提供这一页面。HTML 负责页面结构和正式引用；页面样式、交互脚本、两张型材节点图及 Three.js 运行依赖分别维护在本目录的 `css/`、`js/`、`assets/`、`vendor/three/`。项目运行数据仍存于 `outputs/03-整机选型工作台/`，不随源码迁移。
+
+旧 `outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html`、`three-preview.js`、`current-version-badge.js` 已在新服务接管后移除；基线内容可从 `outputs/03-整机选型工作台/backup-baseline-20261016-030/` 恢复。新服务 health、旧中文 URL 和 35 个直接资源均 HTTP 200，live dependency version 为 `f4f889041a7938a9bab8d716e1b1c2d25a850a8ee8b7d2716745bf8b46778c1a`；共享项目数据 SHA-256 前后均为 `0FB5C87E4A35C95714291B855512F179A65B54F3D620E940C16FD261C16920C4`。已有较早维护记录中的 `outputs/...` 页面路径属于当时状态，不代表当前源码入口。模块回归命令：`node --test src/03-整机选型工作台/tests/*.test.js src/03-整机选型工作台/tests/*.test.mjs`；服务及正式旧 URL 检查：`node tools/tests/prototype-project-api.test.js`。本次自动化回归 27/27 通过。自动化测试不替代真实浏览器视觉验收。
+
 ## 2026-10-15 功能段单选绑定修复
 
 发现新插入功能段沿用 `serial=8`，可能与已载入的 `s8` 段重复，导致相同 `data-id` 的卡片同时显示选中且右侧编辑指向第一条。最终工作台新增段的所有创建入口统一使用 `allocateSegmentId()` 扫描并跳过现有 ID，确保不改已有稳定 ID；渲染和选择前再对可编辑内存副本做缺失/重复 ID 规范化，正式只读不改对象，保留全部段字段。共享 JSON 不在此修复中写回。

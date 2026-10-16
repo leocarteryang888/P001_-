@@ -22,7 +22,7 @@ foreach ($relativePath in $requiredDirectories) {
     }
 }
 
-$allowedRootFiles = @('.gitignore')
+$allowedRootFiles = @('.gitignore', 'AGENTS.md')
 $unexpectedRootFiles = Get-ChildItem -LiteralPath $projectRoot -File -Force |
     Where-Object { $_.Name -notin $allowedRootFiles }
 if ($unexpectedRootFiles) {
@@ -50,12 +50,16 @@ foreach ($relativeHtml in $htmlEntries) {
     $moduleRoot = Split-Path -Parent $htmlPath
     $matches = [regex]::Matches($html, '(?:src|href)=["''](?<path>[^"''#?]+)')
     foreach ($match in $matches) {
-        $assetPath = $match.Groups['path'].Value
+        $assetPath = $match.Groups['path'].Value.Split('?', 2)[0].Split('#', 2)[0]
         if ($assetPath -match '^(?:[a-z]+:|//)') { continue }
+        $decodedPath = [Uri]::UnescapeDataString($assetPath)
+        if ($decodedPath.Contains('\')) {
+            throw "$relativeHtml 的本地资源路径包含无效反斜杠：$assetPath"
+        }
         if ($assetPath.StartsWith('/parts/', [StringComparison]::Ordinal)) {
             $partRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot 'src/04-3D零件库'))
-            $decodedPartPath = [Uri]::UnescapeDataString($assetPath.Substring('/parts/'.Length))
-            if ([IO.Path]::IsPathRooted($decodedPartPath) -or $decodedPartPath.Contains('\')) {
+            $decodedPartPath = $decodedPath.Substring('/parts/'.Length)
+            if ([IO.Path]::IsPathRooted($decodedPartPath)) {
                 throw "$relativeHtml 的零件库路由引用无效：$assetPath"
             }
             $resolvedAsset = [IO.Path]::GetFullPath((Join-Path $partRoot $decodedPartPath.Replace('/', [IO.Path]::DirectorySeparatorChar)))
@@ -63,8 +67,23 @@ foreach ($relativeHtml in $htmlEntries) {
             if (-not $resolvedAsset.StartsWith($partPrefix, [StringComparison]::OrdinalIgnoreCase)) {
                 throw "$relativeHtml 的零件库路由越出模块目录：$assetPath"
             }
+        } elseif ($assetPath.StartsWith('/src/', [StringComparison]::Ordinal)) {
+            $rootRelativePath = $decodedPath.Substring(1).Replace('/', [IO.Path]::DirectorySeparatorChar)
+            if ([IO.Path]::IsPathRooted($rootRelativePath)) {
+                throw "$relativeHtml 的项目资源路由引用无效：$assetPath"
+            }
+            $resolvedAsset = [IO.Path]::GetFullPath((Join-Path $projectRoot $rootRelativePath))
         } else {
-            $resolvedAsset = Join-Path $moduleRoot $assetPath
+            if ([IO.Path]::IsPathRooted($decodedPath)) {
+                throw "$relativeHtml 的模块资源路径不能使用本机绝对路径：$assetPath"
+            }
+            $moduleRelativePath = $decodedPath.Replace('/', [IO.Path]::DirectorySeparatorChar)
+            $resolvedAsset = [IO.Path]::GetFullPath((Join-Path $moduleRoot $moduleRelativePath))
+        }
+        $workspaceRoot = [IO.Path]::GetFullPath($projectRoot).TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+        $workspacePrefix = $workspaceRoot + [IO.Path]::DirectorySeparatorChar
+        if (-not $resolvedAsset.StartsWith($workspacePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "$relativeHtml 的资源路径越出项目目录：$assetPath"
         }
         if (-not (Test-Path -LiteralPath $resolvedAsset -PathType Leaf)) {
             throw "$relativeHtml 引用了不存在的本地文件：$assetPath"
