@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import { test } from 'node:test';
 import { createEditorCpu, THREE } from './editor-cpu-harness.mjs';
 
-const preview=fs.readFileSync(new URL('../../../outputs/03-整机选型工作台/three-preview.js',import.meta.url),'utf8');
+const preview=fs.readFileSync(new URL('../../03-整机选型工作台/js/three-preview.js',import.meta.url),'utf8');
 const formal=fs.readFileSync(new URL('../../03-整机选型工作台/js/formal-three-preview.js',import.meta.url),'utf8');
 function functionSource(source,name){const match=new RegExp(`^\\s*function ${name}\\(`,'m').exec(source);assert.ok(match,`production ${name} exists`);const start=match.index+match[0].indexOf('function'),opening=source.indexOf('{',start);let depth=1,end=opening+1;for(;depth&&end<source.length;end++){if(source[end]==='{')depth++;else if(source[end]==='}')depth--;}return source.slice(start,end)}
 const partToWorld=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(-1,0,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,1,0)));

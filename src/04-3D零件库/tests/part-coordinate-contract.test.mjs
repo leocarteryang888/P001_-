@@ -8,7 +8,7 @@ import { createEditorCpu } from './editor-cpu-harness.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const editor = fs.readFileSync(path.join(root, 'js/part-library.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const preview = fs.readFileSync(path.join(root, '../../outputs/03-整机选型工作台/three-preview.js'), 'utf8');
+const preview = fs.readFileSync(path.join(root, '../03-整机选型工作台/js/three-preview.js'), 'utf8');
 
 const legacyPartToSemantic = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(
   new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1, 0)

@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { createEditorCpu, THREE } from './editor-cpu-harness.mjs';
 
 const storeContext={localStorage:{getItem(){return null}},indexedDB:null};vm.runInNewContext(fs.readFileSync(new URL('../js/part-library-store.js',import.meta.url),'utf8'),storeContext);const normalizePart=storeContext.AHUPartLibraryStore.normalizePart;
-const preview=fs.readFileSync(new URL('../../../outputs/03-整机选型工作台/three-preview.js',import.meta.url),'utf8'),formal=fs.readFileSync(new URL('../../03-整机选型工作台/js/formal-three-preview.js',import.meta.url),'utf8'),decoderContext=vm.createContext({THREE});
+const preview=fs.readFileSync(new URL('../../03-整机选型工作台/js/three-preview.js',import.meta.url),'utf8'),formal=fs.readFileSync(new URL('../../03-整机选型工作台/js/formal-three-preview.js',import.meta.url),'utf8'),decoderContext=vm.createContext({THREE});
 vm.runInContext(preview.slice(preview.indexOf('function linkedGeometry('),preview.indexOf('function linkedAxisVector('))+'\n'+formal.slice(formal.indexOf('  function createPartGeometry('),formal.indexOf('  function axisVector('))+'\nglobalThis.decodeWorkbench=linkedGeometry;globalThis.decodeFormal=createPartGeometry;',decoderContext);
 const validPart=()=>({id:'import-fixture',name:'Imported fixture',category:'custom',kind:'custom',dimensions:{width:200,height:400,depth:600},mounting:{flow:'+z',up:'+y'},customScene:[{id:'fixture-component',geometry:{type:'box',size:[.2,.4,.6]},position:[.1,.2,.3],rotation:[.3,.5,.7],scale:[1.2,.8,1.1]}]});
 const malformed=[
