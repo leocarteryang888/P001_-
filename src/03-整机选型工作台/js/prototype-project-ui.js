@@ -214,11 +214,26 @@
     }
     window.collectProjectForm = collectProjectForm;
   }
+  function projectMatchesSearch(project, query, airflowOptions) {
+    const terms = String(query || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return true;
+    const airflowLabel = unit => airflowOptions.find(([id]) => id === unit?.airflowForm)?.[1] || '';
+    const searchable = [
+      project?.name, project?.code, project?.customer, project?.location,
+      project?.salesCompany, project?.businessOwner, project?.technicalSupport,
+      ...(project?.units || []).flatMap(unit => [
+        unit?.no, unit?.schemeNo, unit?.model, unit?.name,
+        unit?.profile?.productName, unit?.profile?.unitType,
+        unit?.airflowForm, airflowLabel(unit),
+        ...(Array.isArray(unit?.segments) ? unit.segments.flatMap(segment => [segment?.name, segment?.type]) : [])
+      ])
+    ].filter(value => value !== null && value !== undefined).join(' ').toLowerCase();
+    return terms.every(term => searchable.includes(term));
+  }
   renderManager = function () {
-    const q = $('projectSearch').value.trim().toLowerCase();
+    const q = $('projectSearch').value;
     $('projectTree').innerHTML = projects.length ? projects.map((p, i) => {
-      const searchable = [p.name, p.code, p.customer, p.location, p.salesCompany, p.businessOwner].join(' ').toLowerCase();
-      return searchable.includes(q) ? `<button class="${i === selectedProject ? 'active' : ''}" data-project="${i}"><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.code)} · ${p.units.length} 台机组</small></button>` : '';
+      return projectMatchesSearch(p, q, airflowForms) ? `<button class="${i === selectedProject ? 'active' : ''}" data-project="${i}"><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.code)} · ${p.units.length} 台机组</small></button>` : '';
     }).join('') || '<span style="display:block;padding:12px;color:#b8cbd1;font-size:12px">没有匹配项目</span>' : '<span style="display:block;padding:12px;color:#b8cbd1;font-size:12px">当前数据集没有项目</span>';
     if (newProjectMode) { if (!$('prototypeProjectName')) renderProjectForm(); return; }
     $('projectName').classList.remove('new-project-title'); document.querySelector('.manager-head .project-summary').hidden = false; $('addProject').hidden = false; $('saveBtn').hidden = false;

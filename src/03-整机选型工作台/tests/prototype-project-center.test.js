@@ -6,6 +6,23 @@ const root = path.resolve(__dirname, '../../..');
 const html = fs.readFileSync(path.join(root, 'outputs/03-整机选型工作台/工业工作台_ThreeJS原型.html'), 'utf8');
 const ui = fs.readFileSync(path.join(__dirname, '../js/prototype-project-ui.js'), 'utf8');
 
+const searchHelper = ui.match(/function projectMatchesSearch\(project, query, airflowOptions\) \{[\s\S]*?\n  \}/)?.[0];
+assert.ok(searchHelper, 'project center has a focused project search matcher');
+const projectMatchesSearch = new Function(`${searchHelper}; return projectMatchesSearch;`)();
+const airflowOptions = [
+  ['AF-1', '单侧进风 · 上出风'], ['AF-2', '双侧进风 · 上出风']
+];
+const searchableProject = {
+  name: '华东项目', code: 'P-001', technicalSupport: '张工',
+  units: [{ no: 'AHU-01', schemeNo: 'A方案', model: '机型X', name: '新风机组', profile: { productName: '产品Y', unitType: '组合式空调机组' }, airflowForm: 'AF-1', segments: [{ name: '初效过滤段', type: 'filter' }] }]
+};
+assert.equal(projectMatchesSearch(searchableProject, '', airflowOptions), true, 'empty search shows every project');
+assert.equal(projectMatchesSearch(searchableProject, '华东 张工 AHU-01 初效', airflowOptions), true, 'space-separated terms use AND across the same project aggregate');
+assert.equal(projectMatchesSearch(searchableProject, '华东 absent', airflowOptions), false, 'every search term must match');
+assert.equal(projectMatchesSearch(searchableProject, '单侧进风', airflowOptions), true, 'airflow display label is searchable from the current unit value');
+assert.equal(projectMatchesSearch(searchableProject, '组合式空调机组', airflowOptions), true, 'unit type matches the profile unitType field');
+assert.equal(projectMatchesSearch(searchableProject, 'AF-1', airflowOptions), true, 'airflow form identifier remains searchable');
+
 for (const match of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)) {
   if (/type\s*=\s*["']importmap["']/i.test(match[1]) || !match[2].trim()) continue;
   assert.doesNotThrow(() => new Function(match[2]), 'inline workbench script parses');
