@@ -42,5 +42,5 @@
 - 3D 零件库：`src/04-3D零件库/index.html`（本地服务地址 `/parts/`）
 - 本地服务根地址 `/`、`/src/`、`/src/03-整机选型工作台/` 及其 `index.html`，以及“打开整机选型工作台”快捷入口均进入用户指定的 Three.js 工作台 `/工业工作台_ThreeJS原型.html`；查询参数原样保留，过滤器、盘管和模块资源 URL 继续可达。模块 `index.html` 是供直接 `file://` 打开的兼容壳，可显式导出该来源浏览器的 V2 JSON 后进入统一页面。统一页面同时承担项目管理和机组编辑；草稿保存到独立的本机共享原型项目 API 与 `outputs/03-整机选型工作台/shared-prototype-projects.json`，与正式 V2 项目和共享零件库隔离。正式 V2 项目始终只读；用户可显式选择正式机组或导入 V2 JSON 为新原型副本。导入会生成新标识、映射结构和人工字段、标记待复核，并省略七段式专业计算结果；写入只经原型共享 API 的 CAS 成功后发生。旧浏览器 `p001-ahu-prototype-projects-v1` 只读保留，不会在启动或导入时自动发布。
 - 快速打开 3D 零件库：运行 `tools/打开3D零件库.bat`
-- 快速打开工作台：运行 `tools/打开整机选型工作台.bat`，自动检查服务、后台启动并打开最终版页面。服务已运行时复用，不重复启动；启动失败会保留错误提示，日志位于 `outputs/03-整机选型工作台/workbench-server.*.log`。仅准备服务时可执行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/打开整机选型工作台.ps1 -NoBrowser`。聊天中的“网站”卡片只访问本地网址；服务停止后需先运行该启动入口。
+- 快速打开工作台：运行 `tools/打开整机选型工作台.bat`，自动检查服务并通过 Windows URL handler 打开最终版页面。服务已运行时复用，不重复启动；启动成功或失败都会在窗口中显示并暂停，日志位于 `outputs/03-整机选型工作台/workbench-launcher.log`。仅准备服务时可执行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/launch-workbench.ps1 -NoBrowser`。聊天中的“网站”卡片只访问本地网址；服务停止后需先运行该启动入口。
 - 盘管热更新：运行 `tools/启动盘管选型-热更新.bat`
