@@ -25,7 +25,9 @@ function Test-WorkbenchReady {
 function Test-WorkbenchPage {
     try {
         $response = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 5
-        return $response.StatusCode -eq 200 -and $response.Content -match '(?is)<!doctype\s+html|<html\b'
+        return $response.StatusCode -eq 200 -and
+            $response.Content -match '(?is)<!doctype\s+html|<html\b' -and
+            $response.Content -match '(?is)<title>\s*AHU\s+工业工作台\s*·\s*最终版本\s*</title>'
     } catch { return $false }
 }
 

@@ -26,6 +26,14 @@ for (const reference of localReferences) {
 
 const service = require('../../../tools/serve-three-prototype');
 const dependencyFiles = service.getWorkbenchVersion().files;
+const launchScript = fs.readFileSync(path.join(root, 'tools/launch-workbench.ps1'), 'utf8');
+const launcherBatch = fs.readFileSync(path.join(root, 'tools/打开整机选型工作台.bat'), 'utf8');
+assert.match(launchScript, /src\/03-整机选型工作台\/index\.html/, 'the launcher checks the canonical source page');
+assert.match(launchScript, /P001 Three\.js prototype/, 'health check requires the workbench health marker');
+assert.match(launchScript, /AHU\\s\+工业工作台\\s\*·\\s\*最终版本/, 'HTTP readiness checks the canonical page title');
+assert.match(launchScript, /EADDRINUSE/, 'a foreign service on 8765 is reported as a port conflict');
+assert.match(launchScript, /workbench-server\.stderr\.log/, 'startup failures retain a readable log path');
+assert.ok(launcherBatch.indexOf('chcp 65001') < launcherBatch.indexOf('launch-workbench.ps1'), 'the batch entry enables UTF-8 before invoking PowerShell');
 for (const expected of [
   'src/03-整机选型工作台/index.html',
   'src/03-整机选型工作台/css/prototype-workbench-base.css',
@@ -36,5 +44,9 @@ for (const expected of [
   'src/03-整机选型工作台/assets/profile-nodes-25w.png',
   'src/03-整机选型工作台/assets/profile-nodes-50w.png',
 ]) assert.ok(dependencyFiles.includes(expected), `workbench version hash includes ${expected}`);
+for (const reference of localReferences) {
+  const dependencyPath = reference.replace(/^\/src\//, 'src/');
+  assert.ok(dependencyFiles.includes(dependencyPath), `workbench version hash includes page reference ${reference}`);
+}
 
-console.log('通过：正式页面、模块源码引用、外置资源与版本依赖哈希均指向 src/03。');
+console.log('通过：正式页面、启动器检查、模块源码引用、外置资源与版本依赖哈希均指向 src/03。');
