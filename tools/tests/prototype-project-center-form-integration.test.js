@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
+const net = require('node:net');
 const path = require('node:path');
 let JSDOM;
 try {
@@ -13,6 +15,9 @@ try {
 }
 const weather = require('../../src/03-整机选型工作台/js/prototype-weather');
 const selection = require('../../src/03-整机选型工作台/js/prototype-selection-handoff');
+const { createServer } = require('../serve-three-prototype');
+const { createStore } = require('../../src/03-整机选型工作台/js/prototype-project-store');
+const CenterView = require('../../src/03-整机选型工作台/js/prototype-project-center-view');
 
 const projectRoot = path.resolve(__dirname, '../..');
 const page = fs.readFileSync(path.join(projectRoot, 'src/03-整机选型工作台/index.html'), 'utf8');
@@ -253,6 +258,47 @@ function fillProjectForm(name) {
   click(document.querySelector('#cancelProjectForm'));
   await waitFor(() => document.querySelector('.pcv-project-card'), 'center after restored project edit cancellation');
 
+  // Exercise the real store adapter against an isolated real HTTP server, then refresh the actual center view.
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'p001-center-adapter-'));
+  const probe = net.createServer();
+  await new Promise((resolve, reject) => probe.listen(0, '127.0.0.1', error => error ? reject(error) : resolve()));
+  const port = probe.address().port;
+  await new Promise((resolve, reject) => probe.close(error => error ? reject(error) : resolve()));
+  const server = createServer({
+    port,
+    prototypeProjectsFile: path.join(tempRoot, 'projects.json'),
+    prototypeExportsDir: path.join(tempRoot, 'exports'),
+    partDataFile: path.join(tempRoot, 'parts.json')
+  });
+  await new Promise((resolve, reject) => server.listen(port, '127.0.0.1', error => error ? reject(error) : resolve()));
+  const requests = [];
+  const endpoint = `http://127.0.0.1:${port}/api/prototype-projects`;
+  const storage = { getItem: () => null, setItem() {} };
+  const liveStore = createStore({ storage, endpoint, fetchImpl: (url, options) => { requests.push({ url: String(url), method: options?.method || 'GET' }); return fetch(url, options); } });
+  const adapterDom = new JSDOM('<!doctype html><aside id="list"></aside><main id="details"></main>', { url: 'http://p001-adapter.test/' });
+  const liveView = CenterView.mount({ sidebar: adapterDom.window.document.querySelector('#list'), detail: adapterDom.window.document.querySelector('#details'), lifecycle: liveStore.lifecycle, weather });
+  try {
+    await liveStore.initialize([]);
+    const created = {
+      projectId: 'real-adapter-project', lineageId: 'real-adapter-lineage', versionId: 'real-adapter-version',
+      name: '真实适配器联测项目', code: '', customer: '联测客户', salesCompanyCode: 'BJ', businessOwner: '验收',
+      units: [{ unitId: 'real-adapter-unit', unitLineageId: 'real-adapter-unit-lineage', no: 'BJ-001', sequenceNo: '001', name: '新风机组', productType: '组合式空调', segments: [], cabinetSelection: { confirmed: true, source: 'manual' }, pendingRecalculation: false }]
+    };
+    await liveStore.save([created]);
+    await liveView.refresh();
+    assert.ok(requests.some(row => row.method === 'POST' && row.url === `${endpoint}/lifecycle`), 'the real store adapter sends lifecycle POST to the server lifecycle route');
+    assert.ok(requests.some(row => row.method === 'PUT' && row.url === endpoint), 'the real store adapter keeps project save on the base route');
+    const adapterList = adapterDom.window.document.querySelector('#list');
+    assert.equal(adapterList.querySelectorAll('.pcv-project-card').length, 1, 'the refreshed real view renders the newly saved project card');
+    assert.match(adapterList.textContent, /真实适配器联测项目/);
+    assert.match(adapterDom.window.document.querySelector('#details').textContent, /真实适配器联测项目/, 'the refreshed real view displays project details');
+    assert.match(adapterDom.window.document.querySelector('#details').textContent, /新风机组/, 'the refreshed real view displays the saved unit details');
+  } finally {
+    liveView.destroy(); adapterDom.window.close();
+    await new Promise(resolve => { server.close(resolve); server.closeAllConnections?.(); });
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+
   window.close?.(); dom.window.close();
-  console.log('通过：正式 index DOM + 实际 prototype-project-ui.js bridge；新建/编辑/版本取消与保存、历史只读、409重试、回收站恢复后打开/编辑同步均使用隔离存储。');
+  console.log('通过：正式 index DOM + 实际 UI bridge；新建/编辑/版本与回收站流程通过；真实 store adapter + 随机端口临时 server 已验证 lifecycle POST、保存后刷新卡片及详情。');
 })().catch(error => { console.error(error); dom.window.close(); process.exitCode = 1; });

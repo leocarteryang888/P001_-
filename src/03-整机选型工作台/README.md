@@ -1,5 +1,11 @@
 # 整机选型工作台
 
+## 2026-10-17：项目中心真实接口补验
+
+新建项目后的列表空白已修复：共享项目 GET/PUT 使用 `/api/prototype-projects`，生命周期 POST 使用 `/api/prototype-projects/lifecycle`，不可共用同一路由。加载失败会明确提示并提供重试，不清空已加载的项目记录。
+
+新增 `node tools/tests/prototype-project-store-lifecycle.test.js` 验证实际store与隔离服务；正式DOM测试也追加真实store/临时API连接，检验保存后卡片与资料可见。主agent最新回归为32/32模块及5/5工具测试通过；客户数据未由测试改动，现场视觉反馈仍独立记录。当前源码指纹为 `3317493cc572710d10e391e1e35932b5f522148e69f690a972c255cfd3b1e1c6`；更早指纹保留为历史节点。
+
 ## 2026-10-17：03-0 至 03-2 本机版实施与技术验收
 
 本轮由三个 GPT-6 Luna 分块实施，主 agent 复验。正式入口仍为 `tools/打开整机选型工作台.bat`，当前软件源码唯一维护于本模块 `index.html` 及其直接依赖。

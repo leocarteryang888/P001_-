@@ -325,25 +325,38 @@
       message = value || '';
       let status = panel.querySelector('.pcv-status');
       if (!status) { status = doc.createElement('p'); status.className = 'pcv-status'; panel.prepend(status); }
+      status.replaceChildren?.();
       status.textContent = message; status.dataset.error = String(error);
+      if (error) {
+        const retry = button('重试', 'retry-refresh', 'pcv-button');
+        retry.addEventListener('click', () => { refresh().catch(() => {}); });
+        status.append(retry);
+      }
     }
     async function refresh() {
-      const result = dataOf(await lifecycle.list({ includeTrash, includeHistory: true }));
-      records = normalizeRecords(result);
-      if (lifecycle.listExports) {
-      const exportProjects = [...new Map([...records.projects, ...(includeHistory || includeTrash ? records.history.map(projectOf) : []), ...(includeTrash ? records.trash.map(row => row.project) : [])].map(project => [lineageOf(project), project])).values()];
-        const exports = await Promise.all(exportProjects.map(async project => {
-          try { return dataOf(await lifecycle.listExports({ projectId: lineageOf(project) })).exports || []; }
-          catch { return []; }
-        }));
-        records.exports = [...new Map(exports.flat().map(row => [row.exportId, row])).values()];
+      try {
+        const result = dataOf(await lifecycle.list({ includeTrash, includeHistory: true }));
+        const nextRecords = normalizeRecords(result);
+        if (lifecycle.listExports) {
+          const exportProjects = [...new Map([...nextRecords.projects, ...(includeHistory || includeTrash ? nextRecords.history.map(projectOf) : []), ...(includeTrash ? nextRecords.trash.map(row => row.project) : [])].map(project => [lineageOf(project), project])).values()];
+          const exports = await Promise.all(exportProjects.map(async project => {
+            try { return dataOf(await lifecycle.listExports({ projectId: lineageOf(project) })).exports || []; }
+            catch { return []; }
+          }));
+          nextRecords.exports = [...new Map(exports.flat().map(row => [row.exportId, row])).values()];
+        }
+        records = nextRecords;
+        const current = selectedProject();
+        if (!current) {
+          const groups = groupVersions(records.projects, includeHistory ? records.history : []);
+          if (groups[0]?.current) selected = { lineageId: groups[0].lineageId, versionId: versionOf(groups[0].current) };
+        }
+        setMessage(''); render(); return records;
+      } catch (error) {
+        render();
+        setMessage(`项目列表加载失败：${error.message}`, true);
+        throw error;
       }
-      const current = selectedProject();
-      if (!current) {
-        const groups = groupVersions(records.projects, includeHistory ? records.history : []);
-        if (groups[0]?.current) selected = { lineageId: groups[0].lineageId, versionId: versionOf(groups[0].current) };
-      }
-      render(); return records;
     }
     async function invoke(action, project = selectedProject(), unit = null) {
       if (busy) return;

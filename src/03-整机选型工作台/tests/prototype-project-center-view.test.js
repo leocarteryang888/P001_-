@@ -112,6 +112,28 @@ assert.equal(inheritedRows[1].source, '继承气象台站', 'new units display i
   assert.equal(listOptions.includeTrash, true, 'only the explicit trash view requests trash records');
   controller.destroy();
 
+  let listFailure = true, listAttempts = 0;
+  const failureSidebar = new Element('aside', document), failureDetail = new Element('div', document);
+  const failureView = View.mount({ sidebar: failureSidebar, detail: failureDetail, weather,
+    lifecycle: { async list() { listAttempts++; if (listFailure) throw new Error('临时断连'); return { data: { projects: [currentProject], history: [], trash: [] } }; } }
+  });
+  await assert.rejects(failureView.refresh(), /临时断连/);
+  const failureStatus = failureDetail.children[0].children.find(node => node.className === 'pcv-status');
+  assert.match(failureStatus.textContent, /项目列表加载失败.*临时断连/);
+  const retryButton = failureStatus.children[0];
+  assert.equal(retryButton?.dataset.action, 'retry-refresh');
+  assert.equal(retryButton?.textContent, '重试');
+  assert.match(failureSidebar.children[3].innerHTML, /没有匹配项目/, 'initial failure presents an explicit error status alongside the empty placeholder');
+  listFailure = false;
+  retryButton.dispatch('click', retryButton);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(listAttempts, 2, 'retry requests the project list again');
+  assert.match(failureSidebar.children[3].children[0].innerHTML, /医院扩建项目/, 'successful retry replaces the empty placeholder with a project card');
+  listFailure = true;
+  await assert.rejects(failureView.refresh(), /临时断连/);
+  assert.match(failureSidebar.children[3].children[0].innerHTML, /医院扩建项目/, 'a later refresh failure preserves already loaded project records');
+  failureView.destroy();
+
   let currentCalls = 0, historicalSelection = null, trashCalls = 0;
   const sidebar2 = new Element('aside', document), detail2 = new Element('div', document);
   const controller2 = View.mount({ sidebar: sidebar2, detail: detail2, weather,

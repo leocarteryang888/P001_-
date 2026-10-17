@@ -58,8 +58,8 @@
 
   function createStore({ storage, fetchImpl, endpoint = '/api/prototype-projects', key = 'p001-ahu-prototype-projects-v1' }) {
     const state = { localKind: 'absent', localProjects: null, sharedKind: 'loading', sharedProjects: null, revision: null, projects: null, source: null, error: '' };
-    async function request(method, body) {
-      const response = await fetchImpl(endpoint, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, ...(body ? { body: JSON.stringify(body) } : {}) });
+    async function request(method, body, requestEndpoint = endpoint) {
+      const response = await fetchImpl(requestEndpoint, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, ...(body ? { body: JSON.stringify(body) } : {}) });
       let payload;
       try { payload = await response.json(); } catch { payload = {}; }
       if (!response.ok) {
@@ -71,7 +71,8 @@
       return payload;
     }
     async function lifecycle(action, data = {}) {
-      const response = await request('POST', { action, ...data });
+      const lifecycleEndpoint = `${endpoint.replace(/\/+$/, '')}/lifecycle`;
+      const response = await request('POST', { action, ...data }, lifecycleEndpoint);
       if (Number.isSafeInteger(response.revision) && response.revision >= 1) {
         state.revision = response.revision;
         if (action === 'list' && response.data?.projects) { state.sharedKind = 'exists'; state.sharedProjects = clone(response.data.projects); if (state.source === 'shared') state.projects = clone(response.data.projects); }
