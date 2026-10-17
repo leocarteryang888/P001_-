@@ -46,7 +46,7 @@ foreach ($relativeHtml in $htmlEntries) {
     if (-not (Test-Path -LiteralPath $htmlPath -PathType Leaf)) {
         throw "缺少页面入口：$relativeHtml"
     }
-    $html = Get-Content -Raw -LiteralPath $htmlPath
+    $html = Get-Content -Raw -LiteralPath $htmlPath -Encoding UTF8
     $moduleRoot = Split-Path -Parent $htmlPath
     $matches = [regex]::Matches($html, '(?:src|href)=["''](?<path>[^"''#?]+)')
     foreach ($match in $matches) {

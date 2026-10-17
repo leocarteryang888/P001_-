@@ -33,7 +33,7 @@ const { createServer } = require('../serve-three-prototype');
     assert.equal(unified.status, 200);
     const unifiedHtml = await unified.text();
     assert.doesNotMatch(unifiedHtml, />\s*正式项目工作台\s*</u, 'the selected workbench page has no second-workbench navigation');
-    for (const asset of ['/src/03-整机选型工作台/js/prototype-project-store.js', '/src/03-整机选型工作台/js/prototype-project-ui.js', '/three-preview.js']) {
+    for (const asset of ['/src/03-整机选型工作台/js/prototype-project-store.js', '/src/03-整机选型工作台/js/prototype-project-ui.js', '/src/03-整机选型工作台/js/three-preview.js']) {
       const assetResponse = await fetch(`http://127.0.0.1:${testPort}${asset}`, { headers: { Host: `127.0.0.1:${testPort}` } });
       assert.equal(assetResponse.status, 200, `prototype asset route serves ${asset}`);
     }
@@ -41,11 +41,11 @@ const { createServer } = require('../serve-three-prototype');
     assert.deepEqual(await response.json(), { exists: false, revision: null, projects: null });
     const projectSet = [{ code: 'A', name: 'Project A', units: [{ no: 'AHU-A', segments: [{ id: 'old' }] }, { no: 'AHU-B', segments: [] }] }];
     response = await call('PUT', { expectedRevision: null, projects: projectSet });
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 200, await response.clone().text());
     const saved = await response.json();
     assert.equal(saved.revision, 1);
     assert.deepEqual(saved.projects[0].units[1].segments, [], 'an explicitly empty unit remains empty');
-    const changed = structuredClone(projectSet); changed[0].units[0].segments = [{ id: 'edited-A' }];
+    const changed = structuredClone(saved.projects); changed[0].units[0].segments = [{ id: 'edited-A' }];
     response = await call('PUT', { expectedRevision: 1, projects: changed });
     assert.equal(response.status, 200);
     const backup = JSON.parse(fs.readFileSync(`${dataFile}.rev-1.json`, 'utf8'));

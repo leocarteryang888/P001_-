@@ -70,6 +70,15 @@
       }
       return payload;
     }
+    async function lifecycle(action, data = {}) {
+      const response = await request('POST', { action, ...data });
+      if (Number.isSafeInteger(response.revision) && response.revision >= 1) {
+        state.revision = response.revision;
+        if (action === 'list' && response.data?.projects) { state.sharedKind = 'exists'; state.sharedProjects = clone(response.data.projects); if (state.source === 'shared') state.projects = clone(response.data.projects); }
+        if (!['list','get','list-exports','get-export','download','compare-exports'].includes(action)) { state.sharedKind = 'exists'; state.source = 'shared'; state.error = ''; }
+      }
+      return { ok: true, data: response.data, revision: response.revision ?? state.revision };
+    }
     async function initialize(seedProjects) {
       let raw;
       try { raw = storage.getItem(key); }
@@ -127,7 +136,15 @@
       if (state.sharedKind !== 'exists') throw new Error('共享快照当前不可用');
       state.projects = clone(state.sharedProjects); state.source = 'shared'; return state;
     }
-    return { state, initialize, save, saveBeforeSwitch, beforeSelectionChange, publishLocal, viewLocal, useShared };
+    const projectLifecycle = {
+      list: options => lifecycle('list', options), get: options => lifecycle('get', options),
+      createVersion: options => lifecycle('create-version', options), copy: options => lifecycle('copy', options),
+      trash: options => lifecycle('trash', options), restore: options => lifecycle('restore', options),
+      permanentlyDelete: options => lifecycle('permanently-delete', options),
+      export: options => lifecycle('export', options), listExports: options => lifecycle('list-exports', options), getExport: options => lifecycle('get-export', options),
+      download: options => lifecycle('download', options), compareExports: options => lifecycle('compare-exports', options)
+    };
+    return { state, initialize, save, saveBeforeSwitch, beforeSelectionChange, publishLocal, viewLocal, useShared, lifecycle: projectLifecycle };
   }
   return { createStore, validProjects, captureUnitSegments, restoreUnitSegments, createFormalPrototypeCopy, normalizeFormalExport, saveImportedCopy };
 });

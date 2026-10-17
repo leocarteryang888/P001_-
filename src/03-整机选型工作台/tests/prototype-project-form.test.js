@@ -23,10 +23,11 @@ function actualForm({ values, weather='|', overrides=[] , editing=null }) {
   return fn(id => fields[id], { querySelectorAll:()=>nodes }, { value:`${city}|${station}` }, { value:province }, locations, editing, ()=>'PRJ-TEST', {AHUPrototypeWeather:weatherApi});
 }
 
-const base = { prototypeProjectName:'项目', prototypeProjectCode:'P1', prototypeProjectCustomer:'客户', prototypeSalesCompany:'', prototypeBusinessOwner:'', prototypeTechnicalSupport:'支持', prototypeLocation:'上海' };
+const base = { prototypeProjectName:'项目', prototypeProjectCode:'P1', prototypeProjectCustomer:'客户', prototypeSalesCompanyCode:'BJ', prototypeSalesCompany:'', prototypeBusinessOwner:'', prototypeTechnicalSupport:'支持', prototypeLocation:'上海' };
 const bj=weatherApi.getLocations().find(r=>r.province==='北京'&&r.city==='北京');
 let p = actualForm({values:base, weather:`${bj.province}|${bj.city}|${bj.station}`, overrides:[], editing:{units:[{unitId:'u1'}], weatherOverride:{winterAirConditioningTemperature:{value:1}}}});
 assert.equal(p.weatherReference.city,'北京'); assert.equal(p.weatherOverride,undefined); assert.deepEqual(p.units,[{unitId:'u1'}]);
+assert.equal(p.salesCompanyCode,'BJ','new project form must retain the explicitly entered sales company code');
 assert.throws(()=>actualForm({values:base, weather:`${bj.province}|${bj.city}|${bj.station}`, overrides:[['summerAirConditioningWetBulb',40],['summerAirConditioningDryBulb','']], editing:null}), /湿球/);
 assert.throws(()=>actualForm({values:base, weather:`${bj.province}|${bj.city}|${bj.station}`, overrides:[['winterAirConditioningRH',101]], editing:null}), /相对湿度/);
 assert.throws(()=>actualForm({values:base, weather:`${bj.province}|${bj.city}|${bj.station}`, overrides:[['winterAirConditioningRH',-1]], editing:null}), /相对湿度/);

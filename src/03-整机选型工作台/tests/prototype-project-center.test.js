@@ -41,13 +41,13 @@ assert.match(html, /workspace-minimized \.screen|workspace-minimized/, 'minimize
 assert.match(ui, /step='any'|step="any"/, 'weather correction inputs accept decimal values');
 assert.match(ui, /设备编号<\/span>[\s\S]*方案编号<\/span>[\s\S]*机组型号<\/span>[\s\S]*气流形式<\/span>[\s\S]*功能段组合<\/span>[\s\S]*数量<\/span>[\s\S]*状态<\/span>/, 'unit table uses the requested columns');
 assert(!/data-new-unit-field=|id="confirmNewUnit"/.test(ui), 'old inline creation row is removed');
-assert(ui.includes('data-unit-identity="no"') && ui.includes('data-unit-identity="schemeNo"'), 'identity fields are editable in unit information');
+assert(ui.includes('data-unit-identity="no"') && ui.includes('data-unit-identity="customerUnitNo"'), 'unit number and optional customer number are distinct identity fields');
 assert.match(ui, /function beginPrototypeUnitCreation\([\s\S]*loadPrototypeUnit\(selectedUnit\); showWorkspace\(selectedUnit\)/, 'new unit opens its unit-information workspace immediately');
-const numberHelper = ui.match(/function nextEquipmentNo\(units\) \{[\s\S]*?\n  \}/)?.[0];
+const numberHelper = ui.match(/function nextEquipmentNo\(units, reservations = \[\]\) \{[\s\S]*?\n  \}/)?.[0];
 assert.ok(numberHelper, 'next equipment number helper exists');
-const getNextEquipmentNo = new Function(`${numberHelper}; return nextEquipmentNo;`)();
-assert.equal(getNextEquipmentNo([{ no: 'AHU-03' }, { no: 'AHU-04' }, { no: 'AHU-06' }]), 'AHU-07', 'default number advances from the highest existing AHU number');
-assert.equal(getNextEquipmentNo([]), 'AHU-01', 'empty projects begin at AHU-01');
+const getNextEquipmentNo = new Function('window', `${numberHelper}; return nextEquipmentNo;`)({ AHUPrototypeProjectVersion: require('../js/prototype-project-version') });
+assert.deepEqual(getNextEquipmentNo([{ no: 'V-BJ2609-F6-001D-TE', sequenceNo: '001' }]).no, 'V-BJ2609-F6-002', 'default number advances the unique three-digit equipment sequence and omits old revision/flags');
+assert.deepEqual(getNextEquipmentNo([]).no, '001', 'empty projects begin at sequence 001');
 assert.match(ui, /quantity:\s*1,\s*state:\s*'草稿'/, 'new units default to quantity one');
 assert.match(ui, /AHUPrototypeAirflowCompat\?\.resolve\(unit\)/, 'airflow display reads the canonical field and strict legacy compatibility helper');
 assert.doesNotMatch(ui, /卧式 · 单气路/, 'unit list does not invent an airflow form');

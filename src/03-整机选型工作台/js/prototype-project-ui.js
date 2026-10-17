@@ -13,7 +13,13 @@
   const store = AHUPrototypeProjectStore.createStore({ storage: window.localStorage, fetchImpl: window.fetch.bind(window) });
   const A = window.AHUPrototypeSelectionHandoff, H = window.AHUSelectionHandoff;
   const rawSave = store.save;
-  store.save = async data => { guardPrototypeSave(); return rawSave(A.ensureIds(A.clone(data))); };
+  store.save = async data => {
+    guardPrototypeSave(); const candidate = A.clone(data);
+    const editingProjectForm = typeof newProjectMode !== 'undefined' && newProjectMode;
+    const targetIndex = editingProjectForm ? (typeof editProjectIndex !== 'undefined' && editProjectIndex !== null ? editProjectIndex : candidate.length - 1) : typeof selectedProject === 'number' ? selectedProject : -1;
+    if (candidate[targetIndex]) A.ensureIds([candidate[targetIndex]]);
+    return rawSave(candidate);
+  };
   const rawSaveBeforeSwitch=store.saveBeforeSwitch, rawBeforeSelectionChange=store.beforeSelectionChange;
   if(rawSaveBeforeSwitch) store.saveBeforeSwitch=async (...args)=>{guardPrototypeSave();return rawSaveBeforeSwitch(...args);};
   if(rawBeforeSelectionChange) store.beforeSelectionChange=async (...args)=>{guardPrototypeSave();return rawBeforeSelectionChange(...args);};
@@ -81,6 +87,7 @@
   }
   let projectFormDirty = false;
   let projectSaveBusy = false;
+  let drawingExportBusy = false;
   function updateWindowIcons() { const max=$('projectEditorMax'), min=$('projectEditorMin'); if (!max||!min) return; max.innerHTML=document.fullscreenElement?'<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 7h10v10H7zM3 13V3h10"/></svg>':'<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8V3h5M12 3h5v5M17 12v5h-5M8 17H3v-5"/></svg>'; const minimized=document.querySelector('.app')?.classList.contains('workspace-minimized'); min.innerHTML=minimized?'<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h14M3 5h14M3 15h14"/></svg>':'<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v14H3zM6 10h8"/></svg>'; max.setAttribute('aria-label',document.fullscreenElement?'恢复窗口':'最大化窗口'); max.title=max.getAttribute('aria-label'); min.setAttribute('aria-label',minimized?'恢复编辑区':'收起编辑区'); min.title=min.getAttribute('aria-label'); }
   function setWindowControls() { const max=$('projectEditorMax'), min=$('projectEditorMin'); if (!max||!min) return; max.onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.().catch(()=>notice('无法进入全屏',true)); min.onclick=()=>{document.querySelector('.app')?.classList.toggle('workspace-minimized');updateWindowIcons();}; if(!setWindowControls.bound){document.addEventListener('fullscreenchange',updateWindowIcons);setWindowControls.bound=true;} updateWindowIcons(); }
   setWindowControls();
@@ -98,23 +105,122 @@
   function guardPrototypeSave(){ if(pendingNewUnit&&!newUnitConfirmationAuthorized) throw new Error('新建机组必须先验证确认'); return true; }
   window.guardPrototypeSave=guardPrototypeSave;
   let lastDeletedUnit = null;
-  const projectCode = () => `PRJ-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
-  function nextEquipmentNo(units) {
-    const existing = new Set((units || []).map(unit => String(unit.no || '').trim().toUpperCase()));
-    const maxSequence = Math.max(0, ...(units || []).map(unit => {
-      const match = String(unit.no || '').trim().match(/^AHU-(\d+)$/i);
-      return match ? Number(match[1]) : 0;
-    }));
-    let sequence = maxSequence + 1, candidate;
-    do { candidate = `AHU-${String(sequence++).padStart(2, '0')}`; } while (existing.has(candidate.toUpperCase()));
-    return candidate;
+  let projectCenterView = null;
+  let centerSelectedVersion = null;
+  function syncFrozenExport(project, result) {
+    const frozen = result?.data?.export?.snapshot;
+    if (!frozen) throw new Error('导出成功响应缺少冻结快照');
+    const index = projects.findIndex(item => item.projectId === (project.projectId || project.code));
+    if (index < 0) throw new Error('导出成功，但当前项目列表中找不到该项目');
+    projects.splice(index, 1, frozen); state.revision = result.revision; state.sharedKind = 'exists'; state.source = 'shared';
+    state.projects = JSON.parse(JSON.stringify(projects)); state.sharedProjects = JSON.parse(JSON.stringify(projects)); baseline = JSON.stringify(projects);
+    refreshStoreNotice(); return frozen;
+  }
+  window.AHUPrototypeDrawingArchive = {
+    async saveAndDownload({ unitId, kind, filename, blob, buildArtifact }) {
+      if (drawingExportBusy) throw new Error('图纸正在归档，请稍候');
+      if (!['pdf','dxf'].includes(kind) || !(blob instanceof Blob) || (buildArtifact != null && typeof buildArtifact !== 'function')) throw new Error('图纸产物无效');
+      if (state.source !== 'shared' || state.sharedKind !== 'exists') throw new Error('请先保存项目到本机共享存储，再归档图纸');
+      let project = projects[selectedProject], unit = project?.units?.find(item => item.unitId === unitId);
+      if (!project || !unit || formalReadonly) throw new Error('当前机组不属于可编辑的共享项目');
+      drawingExportBusy = true;
+      try {
+        if (isDirty()) {
+          if (projectSaveBusy || newProjectMode || pendingNewUnit) throw new Error('请先完成当前项目或机组资料录入');
+          persistActiveUnit();
+          const saved = await store.save(projects);
+          if (!saved?.projects) throw new Error('项目保存未返回最新数据，图纸未归档');
+          projects.splice(0, projects.length, ...saved.projects);
+          state.revision = saved.revision; state.source = 'shared'; state.sharedKind = 'exists';
+          state.projects = JSON.parse(JSON.stringify(projects)); state.sharedProjects = JSON.parse(JSON.stringify(projects)); baseline = JSON.stringify(projects);
+          project = projects[selectedProject]; unit = project?.units?.find(item => item.unitId === unitId);
+          if (!project || !unit) throw new Error('保存后当前机组不存在，图纸未归档');
+          if (buildArtifact) { const artifact = await buildArtifact(); blob = artifact?.blob; filename = artifact?.filename || filename; }
+          if (!(blob instanceof Blob)) throw new Error('保存后图纸重新生成失败，图纸未归档');
+        }
+        const bytes = new Uint8Array(await blob.arrayBuffer()); let binary = '';
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        const result = await store.lifecycle.export({ projectId: project.projectId || project.code, drawingArtifact: { unitId, kind, filename, contentBase64: btoa(binary) } });
+        syncFrozenExport(project, result);
+        const archived = result.data.artifactFiles?.find(item => item.kind === `requested-${kind}` && item.unitId === unitId);
+        if (!archived) throw new Error('项目已归档，但找不到对应的独立图纸文件');
+        const anchor = document.createElement('a'); anchor.href = archived.url; anchor.download = archived.filename; anchor.hidden = true; document.body.append(anchor); anchor.click(); anchor.remove();
+        refreshStoreNotice(); notice(`图纸已随项目快照归档并下载：${archived.filename}`); return result;
+      } finally { drawingExportBusy = false; }
+    }
+  };
+  function destroyProjectCenter() { projectCenterView?.destroy?.(); projectCenterView = null; }
+  async function refreshProjectCenter() { if (projectCenterView) { try { await projectCenterView.refresh(); } catch (error) { notice(`项目中心刷新失败：${error.message}`, true); } } }
+  function mountProjectCenter() {
+    if (projectCenterView || !window.AHUPrototypeProjectCenterView?.mount) return projectCenterView;
+    const centerLifecycle = { ...store.lifecycle };
+    for (const method of ['trash', 'restore', 'permanentlyDelete']) {
+      centerLifecycle[method] = async options => {
+        const result = await store.lifecycle[method](options);
+        try {
+          const latest = await store.lifecycle.list({ includeHistory: true, includeTrash: true });
+          const previousId = projects[selectedProject]?.projectId;
+          if (!newProjectMode && !projectFormDirty && JSON.stringify(projects) === baseline) {
+            projects.splice(0, projects.length, ...(latest.data.projects || [])); baseline = JSON.stringify(projects);
+            state.revision = latest.revision; state.sharedKind = 'exists'; state.source = 'shared';
+            const retainedIndex = projects.findIndex(item => item.projectId === previousId);
+            selectedProject = retainedIndex >= 0 ? retainedIndex : Math.min(selectedProject, Math.max(0, projects.length - 1)); selectedUnit = Math.min(selectedUnit, Math.max(0, (projects[selectedProject]?.units?.length || 1) - 1));
+            refreshStoreNotice();
+          }
+        } catch (error) { notice(`操作已完成，但项目列表同步失败：${error.message}`, true); }
+        return result;
+      };
+    }
+    projectCenterView = window.AHUPrototypeProjectCenterView.mount({
+      sidebar: document.querySelector('.manager aside'), detail: document.querySelector('.manager .unit-area'), lifecycle: centerLifecycle, weather: window.AHUPrototypeWeather, airflowForms,
+      onNewProject: () => window.showPrototypeEditor(),
+      onEditProject: project => { const index = projects.findIndex(item => item.projectId === project.projectId); if (index >= 0 && !project.isFrozen) window.editPrototypeProject(index); else notice('已导出版本为冻结存档；请创建新版本后编辑。', true); },
+      onCreateVersion: async project => {
+        if (projectSaveBusy || newProjectMode) throw new Error('请先完成当前项目资料保存或取消');
+        const name = window.prompt('请输入新版本项目名称', `${project.name || '未命名项目'}（新版本）`);
+        if (name === null) return { data: { cancelled: true } };
+        if (!name.trim()) throw new Error('项目名称不能为空');
+        const draft = JSON.parse(JSON.stringify(project)); draft.projectId = A.newId('project'); draft.lineageId = project.lineageId || project.projectId || project.code;
+        draft.versionId = window.AHUPrototypeProjectVersion.makeId('version'); draft.parentVersionId = project.versionId || null; draft.parentProjectId = project.projectId || null;
+        draft.isFrozen = false; draft.pendingVersionDraft = true; draft.name = name.trim(); draft.state = '草稿'; draft.modifiedAt = undefined;
+        centerSelectedVersion = !projects.some(item => item.projectId === project.projectId) ? project : null;
+        projects.push(draft); selectedProject = projects.length - 1; selectedUnit = 0; editProjectIndex = selectedProject; newProjectMode = true; destroyProjectCenter(); renderManager(); refreshStoreNotice();
+        setTimeout(() => document.querySelectorAll('.project-form input,.project-form select,.project-form button').forEach(node => { node.disabled = false; }), 0);
+        notice('请核对并修改新版本资料；保存确认后才写入版本。取消不会改变原版或历史记录。'); return { data: { project: draft, pending: true } };
+      },
+      onSelectVersion: ({ projectId, project }) => { const index = projects.findIndex(item => item.projectId === projectId); if (index >= 0) { selectedProject = index; selectedUnit = 0; centerSelectedVersion = project?.isFrozen ? project : null; } else centerSelectedVersion = project || null; renderManager(); if (centerSelectedVersion?.isFrozen) notice('当前为已导出的只读历史快照。'); },
+      onOpenUnit: (project, unit) => { const pi = projects.findIndex(item => item.projectId === project.projectId), ui = project.units?.findIndex(item => item.unitId === unit.unitId); if (pi >= 0 && ui >= 0) { selectedProject = pi; selectedUnit = ui; showWorkspace(ui); } },
+      onNewUnit: project => { const pi = projects.findIndex(item => item.projectId === project.projectId); if (pi >= 0) { selectedProject = pi; selectedUnit = 0; window.addPrototypeUnit?.(); } },
+      onExport: async project => {
+        if (isDirty()) throw new Error('当前项目存在未保存修改，请先保存后再导出');
+        const result = await store.lifecycle.export({ projectId: project.projectId });
+        syncFrozenExport(project, result);
+        for (const item of result.data.artifactFiles || []) { const anchor = document.createElement('a'); anchor.href = item.url; anchor.download = item.filename; anchor.hidden = true; document.body.append(anchor); anchor.click(); anchor.remove(); }
+        const anchor = document.createElement('a'); anchor.href = result.data.downloadUrl; anchor.download = result.data.export.filename || ''; anchor.hidden = true; document.body.append(anchor); anchor.click(); anchor.remove();
+        notice(`项目已冻结并归档，已提供 ${result.data.artifactFiles?.length || 0} 个独立机组产物及快照清单：${result.data.export.filename}`); return result;
+      }
+    });
+    return projectCenterView;
+  }
+  const projectCode = () => '';
+  function nextEquipmentNo(units, reservations = []) {
+    const version = window.AHUPrototypeProjectVersion;
+    const confirmed = (units || []).map(unit => {
+      const sequenceNo = unit.sequenceNo || version?.inferSequenceNo(unit.no);
+      if (!sequenceNo || !version?.equipmentNumberParts(unit.no, sequenceNo)) throw new Error(`无法唯一识别“${unit.no}”中的三位顺延号，请先明确确认编号位置。`);
+      if (!unit.sequenceNo && !window.confirm(`机组“${unit.no}”中发现唯一三位序号 ${sequenceNo}。确认将它作为后续顺延号吗？`)) throw new Error('已取消机组编号顺延确认');
+      return { ...unit, sequenceNo };
+    });
+    const result = version.nextEquipmentNumber(confirmed, reservations);
+    return result;
   }
   const weatherLocations = window.AHUPrototypeWeather?.getLocations?.() || [];
   const weatherLocationOptions = weatherLocations.map((row, index) => `<option value="${index}">${escapeHtml([row.province, row.city, row.station].filter(Boolean).join(' · '))}</option>`).join('');
   const weatherPreviewMarkup = `<div class="weather-reference-preview" id="prototypeWeatherPreview" aria-live="polite"><span>冬季干球 <b data-weather-preview="winterAirConditioningTemperature">—</b> ℃</span><span>冬季 RH <b data-weather-preview="winterAirConditioningRH">—</b> %</span><span>夏季干球 <b data-weather-preview="summerAirConditioningDryBulb">—</b> ℃</span><span>夏季湿球 <b data-weather-preview="summerAirConditioningWetBulb">—</b> ℃</span></div>`;
-  const projectFormMarkup = () => `<section class="project-form" aria-label="${editProjectIndex !== null ? '项目资料' : '新建项目'}">
+  const projectFormMarkup = (editing = null) => `<section class="project-form" aria-label="${editing ? '项目资料' : '新建项目'}">
     <label>项目名称 <input id="prototypeProjectName" autocomplete="off" placeholder="请输入项目名称"></label>
-    <label>项目编号 <input id="prototypeProjectCode" value="${projectCode()}" autocomplete="off"></label>
+    <label>销售公司代码 <input id="prototypeSalesCompanyCode" autocomplete="off" placeholder="请输入已确认的公司代码" value="${escapeHtml(editing?.salesCompanyCode || '')}"></label>
+    <label>项目编号 <input id="prototypeProjectCode" value="${escapeHtml(editing?.code || projectCode())}" autocomplete="off" placeholder="保存后按公司代码和创建年月分配" readonly></label>
     <label>客户名称 <input id="prototypeProjectCustomer" autocomplete="off" placeholder="请输入客户名称"></label>
     <label>销售公司 <input id="prototypeSalesCompany" autocomplete="organization" placeholder="请输入销售公司"></label>
     <label>业务承办人 <input id="prototypeBusinessOwner" autocomplete="name" placeholder="请输入业务承办人"></label>
@@ -123,7 +229,7 @@
     <label class="weather-field">参考室外工况地点 · 省份 <select id="prototypeWeatherProvince"><option value="">请选择省份</option>${[...new Set(weatherLocations.map(row=>row.province))].map(v=>`<option>${escapeHtml(v)}</option>`).join('')}</select></label>
     <label class="weather-field">城市 / 台站 <select id="prototypeWeatherStation" disabled><option value="">请先选择省份</option></select></label>
     <div class="weather-values">${['winterAirConditioningTemperature','winterAirConditioningRH','summerAirConditioningDryBulb','summerAirConditioningWetBulb'].map(key=>`<label><span>${key==='winterAirConditioningTemperature'?'冬季干球温度（℃）':key==='winterAirConditioningRH'?'冬季相对湿度（%）':key==='summerAirConditioningDryBulb'?'夏季干球温度（℃）':'夏季湿球温度（℃）'}</span><small>气象库参考值：<b data-weather-base="${key}">—</b></small><input type="number" step="any" ${key==='winterAirConditioningRH'?'min="0" max="100"':''} data-weather-override="${key}" placeholder="手动修正"><small>最终采用：<b data-weather-final="${key}">—</b> · <i data-weather-source="${key}">气象库</i></small></label>`).join('')}</div>
-    <div class="project-form-actions"><small id="projectFormNotice" role="status" aria-live="polite"></small></div>
+    <div class="project-form-actions"><small id="projectFormNotice" role="status" aria-live="polite"></small><button type="button" class="btn light" id="cancelProjectForm">取消</button></div>
   </section>`;
   function renderProjectForm() {
     const editing = editProjectIndex !== null ? projects[editProjectIndex] : null;
@@ -132,14 +238,15 @@
     document.querySelector('.app')?.classList.add('editor-mode');
     $('projectSubtitle').textContent = '';
     $('crumb').textContent = '';
-    $('saveBtn').hidden = false; $('saveBtn').textContent = '保存'; $('projectEditorMax').hidden = false; $('projectEditorMin').hidden = false;
+    $('saveBtn').hidden = false; $('saveBtn').disabled = false; $('saveBtn').textContent = '保存'; $('projectEditorMax').hidden = false; $('projectEditorMin').hidden = false;
     document.querySelector('.project-title-block')?.appendChild($('saveBtn'));
     $('projectEditorMax').textContent = '最大化';
     $('projectEditorMax').innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8V3h5M12 3h5v5M17 12v5h-5M8 17H3v-5"/></svg>';
     $('projectEditorMin').innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h14M3 5h14M3 15h14"/></svg>';
     document.querySelector('.manager-head .project-summary').hidden = true;
-    $('addProject').hidden = true;
-    document.querySelector('.unit-area').innerHTML = projectFormMarkup();
+    if ($('addProject')) $('addProject').hidden = true;
+    document.querySelector('.unit-area').innerHTML = projectFormMarkup(editing);
+    document.querySelector('.unit-area').dataset.projectFormContext = editing ? `edit:${editProjectIndex}:${editing.projectId || editing.code || ''}` : 'new';
     document.querySelectorAll('[data-weather-override]').forEach(input=>{input.step='any';if(input.dataset.weatherOverride==='winterAirConditioningRH'){input.min='0';input.max='100';}});
     document.querySelector('.unit-area').hidden = false;
     if (editing) {
@@ -188,10 +295,11 @@
       node.addEventListener('input', () => { projectFormDirty = true; refreshStoreNotice(); });
       node.addEventListener('change', () => { projectFormDirty = true; refreshStoreNotice(); });
     });
+    $('cancelProjectForm')?.addEventListener('click', () => window.cancelPrototypeProjectForm?.());
     setWindowControls();
     function collectProjectForm() {
       const project = {
-        name: $('prototypeProjectName').value.trim() || '未命名项目', code: $('prototypeProjectCode').value.trim() || projectCode(),
+        name: $('prototypeProjectName').value.trim() || '未命名项目', code: editing?.code || '', salesCompanyCode: $('prototypeSalesCompanyCode').value.trim().toUpperCase(),
         customer: $('prototypeProjectCustomer').value.trim() || '未填写客户', salesCompany: $('prototypeSalesCompany').value.trim(),
         businessOwner: $('prototypeBusinessOwner').value.trim(), technicalSupport: $('prototypeTechnicalSupport').value,
         location: $('prototypeLocation').value.trim(),
@@ -231,12 +339,26 @@
     return terms.every(term => searchable.includes(term));
   }
   renderManager = function () {
+    if (newProjectMode) destroyProjectCenter();
+    else {
+      mountProjectCenter();
+      if (projectCenterView) {
+        $('projectName').classList.remove('new-project-title'); document.querySelector('.manager-head .project-summary').hidden = false; if ($('addProject')) $('addProject').hidden = false;
+        document.querySelector('.app')?.classList.remove('editor-mode'); $('partsLibraryBtn').hidden = false; $('projectEditorMax').hidden = false; $('projectEditorMin').hidden = false;
+        document.querySelector('.project-title-block')?.appendChild($('saveBtn')); $('crumb').textContent = '项目中心'; document.querySelector('.unit-area').hidden = false;
+        const p = centerSelectedVersion || projects[selectedProject];
+        $('saveBtn').hidden = Boolean(centerSelectedVersion); $('saveBtn').disabled = Boolean(centerSelectedVersion);
+        $('projectName').textContent = p?.name || '项目中心'; $('projectSubtitle').textContent = p ? (p.isFrozen ? '已导出冻结版本 · 只读存档' : '项目及机组资料') : '创建项目后可添加机组';
+        $('metricCode').textContent = p?.name || '—'; $('metricUnits').textContent = p?.salesCompany || p?.salesCompanyCode || '—'; $('metricPhase').textContent = p?.code || '—'; $('metricState').textContent = p?.businessOwner || '—';
+        refreshProjectCenter(); return;
+      }
+    }
     const q = $('projectSearch').value;
     $('projectTree').innerHTML = projects.length ? projects.map((p, i) => {
       return projectMatchesSearch(p, q, airflowForms) ? `<button class="${i === selectedProject ? 'active' : ''}" data-project="${i}"><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.code)} · ${p.units.length} 台机组</small></button>` : '';
     }).join('') || '<span style="display:block;padding:12px;color:#b8cbd1;font-size:12px">没有匹配项目</span>' : '<span style="display:block;padding:12px;color:#b8cbd1;font-size:12px">当前数据集没有项目</span>';
-    if (newProjectMode) { if (!$('prototypeProjectName')) renderProjectForm(); return; }
-    $('projectName').classList.remove('new-project-title'); document.querySelector('.manager-head .project-summary').hidden = false; $('addProject').hidden = false; $('saveBtn').hidden = false;
+    if (newProjectMode) { const expectedFormContext = editProjectIndex !== null ? `edit:${editProjectIndex}:${projects[editProjectIndex]?.projectId || projects[editProjectIndex]?.code || ''}` : 'new'; if (!$('prototypeProjectName') || document.querySelector('.unit-area')?.dataset.projectFormContext !== expectedFormContext) renderProjectForm(); $('saveBtn').hidden = false; $('saveBtn').disabled = false; document.querySelector('.project-title-block')?.appendChild($('saveBtn')); return; }
+    $('projectName').classList.remove('new-project-title'); document.querySelector('.manager-head .project-summary').hidden = false; if ($('addProject')) $('addProject').hidden = false; $('saveBtn').hidden = false;
     document.querySelector('.unit-area').hidden = false;
     document.querySelector('.app')?.classList.remove('editor-mode');
     $('partsLibraryBtn').hidden = false;
@@ -263,17 +385,26 @@
     $('addUnit').addEventListener('click', () => window.addPrototypeUnit());
     $('undoUnitDelete')?.addEventListener('click', () => { const d = lastDeletedUnit; if (!d || d.projectId !== (p.projectId || p.code || `project-${selectedProject}`)) return; p.units.splice(Math.min(d.index, p.units.length), 0, d.unit); lastDeletedUnit = null; renderManager(); notice('已退回最近删除的机组，请点击保存按钮写入共享存储。'); refreshStoreNotice(); });
   };
-  window.showPrototypeEditor = function () { if (newProjectMode) { notice('当前项目资料正在编辑，请先保存。', true); return; } editProjectIndex = null; newProjectMode = true; renderManager(); };
+  window.showPrototypeEditor = function () { if (newProjectMode) { notice('当前项目资料正在编辑，请先保存。', true); return; } centerSelectedVersion = null; editProjectIndex = null; newProjectMode = true; renderManager(); };
+  window.cancelPrototypeProjectForm = function () {
+    if (!newProjectMode || projectSaveBusy) return false;
+    const cancelledVersion = editProjectIndex !== null && projects[editProjectIndex]?.pendingVersionDraft;
+    if (cancelledVersion) projects.splice(editProjectIndex, 1);
+    newProjectMode = false; editProjectIndex = null; projectFormDirty = false; renderManager();
+    if (cancelledVersion && centerSelectedVersion) projectCenterView?.selectVersion?.(centerSelectedVersion);
+    refreshStoreNotice(); return true;
+  };
   window.editPrototypeProject = function (index) { if (newProjectMode) { notice('当前项目资料正在编辑，请先保存。', true); return; } if (!projects[index]) return; editProjectIndex = index; selectedProject = index; newProjectMode = true; renderManager(); };
   function beginPrototypeUnitCreation() {
     const project = projects[selectedProject]; if (!project || pendingNewUnit || formalReadonly || projectSaveBusy || (typeof newProjectMode!=='undefined'&&newProjectMode)) { if(pendingNewUnit) notice('新机组资料正在录入，请先完成验证或取消。', true); return null; }
-    const no=nextEquipmentNo(project.units), schemeNo=project.units.at(-1)?.schemeNo||'001';
-    const unit={unitId:A.newId('unit'),no,schemeNo,name:'新建机组',quantity:1,state:'草稿',cabinetSeries:'25W',installationLocation:'室内',segments:[]};
+    let numbering; try { numbering=nextEquipmentNo(project.units, project.usedUnitNumbers || []); } catch(error) { notice(error.message,true); return null; }
+    const { no, sequenceNo }=numbering, schemeNo=no;
+    const unit={unitId:A.newId('unit'),no,sequenceNo,schemeNo,name:'新建机组',quantity:1,state:'草稿',cabinetSeries:'25W',installationLocation:'室内',segments:[]};
     project.units.push(unit); selectedUnit=project.units.length-1; pendingNewUnit={projectId:project.projectId||project.code,unitId:unit.unitId}; loadPrototypeUnit(selectedUnit); showWorkspace(selectedUnit); return unit;
   }
-  function validateUnitIdentityInput(unit, host) { const nodes=host?.querySelectorAll?.('[data-unit-identity]')||[]; if(!nodes.length&&!(typeof pendingNewUnit!=='undefined'&&pendingNewUnit))return {valid:true,errors:[]}; const values={}; nodes.forEach(node=>values[node.dataset.unitIdentity]=String(node.value??'')); const errors=[],no=values.no?.trim()||'',schemeNo=values.schemeNo?.trim()||'',qtyRaw=(values.quantity||'').trim(),qty=Number(qtyRaw); if(!no)errors.push({field:'no',message:'设备编号必须填写'}); if(!schemeNo)errors.push({field:'schemeNo',message:'方案编号必须填写'}); if(!/^[0-9]+$/.test(qtyRaw)||!Number.isSafeInteger(qty)||qty<1)errors.push({field:'quantity',message:'数量必须为正整数'}); if(no&&projects[selectedProject]?.units?.some(item=>item.unitId!==unit.unitId&&String(item.no||'').trim().toUpperCase()===no.toUpperCase()))errors.push({field:'no',message:'设备编号已存在，请修改后再确认。'}); return {valid:!errors.length,errors,values}; }
+  function validateUnitIdentityInput(unit, host) { const nodes=host?.querySelectorAll?.('[data-unit-identity]')||[]; if(!nodes.length&&!(typeof pendingNewUnit!=='undefined'&&pendingNewUnit))return {valid:true,errors:[]}; const values={}; nodes.forEach(node=>values[node.dataset.unitIdentity]=node.type==='checkbox'?node.checked:String(node.value??'')); const errors=[],no=values.no?.trim()||'',qtyRaw=(values.quantity||'').trim(),qty=Number(qtyRaw),productType=values.productType||unit.productType||'组合式空调'; values.productType=productType; if(!no)errors.push({field:'no',message:'机组编号必须填写'}); if(typeof pendingNewUnit!=='undefined'&&pendingNewUnit&&no&&!(window.AHUPrototypeProjectVersion?.inferSequenceNo(no)))errors.push({field:'no',message:'机组编号须包含唯一的三位流水号'}); if(!/^[0-9]+$/.test(qtyRaw)||!Number.isSafeInteger(qty)||qty<1)errors.push({field:'quantity',message:'数量必须为正整数'}); if(!['组合式空调','新风处理','热回收新风'].includes(productType))errors.push({field:'productType',message:'产品类型必须从已确认的三类中选择'}); if(no&&projects[selectedProject]?.units?.some(item=>item.unitId!==unit.unitId&&String(item.no||'').trim().toUpperCase()===no.toUpperCase()))errors.push({field:'no',message:'机组编号已被占用，请由技术支持确认未使用的新编号。'}); return {valid:!errors.length,errors,values}; }
   window.validateUnitIdentityInput=validateUnitIdentityInput;
-  function onUnitIdentityInput(event){const node=event.target,unit=projects[selectedProject]?.units?.[selectedUnit];if(!unit||formalReadonly||!node?.dataset?.unitIdentity)return false;unit[node.dataset.unitIdentity]=node.value;return true;}
+  function onUnitIdentityInput(event){const node=event.target,unit=projects[selectedProject]?.units?.[selectedUnit];if(!unit||formalReadonly||!node?.dataset?.unitIdentity)return false;unit[node.dataset.unitIdentity]=node.type==='checkbox'?node.checked:node.value;return true;}
   window.onUnitIdentityInput=onUnitIdentityInput;
   function cancelPrototypeUnitCreation() { if(!pendingNewUnit||formalReadonly||projectSaveBusy)return false; const project=projects[selectedProject]; if(!project||String(project.projectId||project.code)!==String(pendingNewUnit.projectId))return false; const index=project.units?.findIndex(unit=>unit.unitId===pendingNewUnit.unitId); if(index<0)return false; project.units.splice(index,1); pendingNewUnit=null; showManager(); return true; }
   window.beginPrototypeUnitCreation=beginPrototypeUnitCreation;
@@ -325,8 +456,17 @@
           const before = projects[editProjectIndex], after = candidateProjects[editProjectIndex];
           (after.units || []).forEach((unit, index) => { const oldUnit = before.units?.[index] || {}; const a = window.AHUPrototypeWeather?.resolve?.(before, oldUnit) || {}, b = window.AHUPrototypeWeather?.resolve?.(after, unit) || {}; const keys=[['winter','dryBulb'],['winter','rh'],['summer','dryBulb'],['summer','wetBulb']]; if (keys.some(([season,key]) => (a[season]?.[key] ?? null) !== (b[season]?.[key] ?? null))) { unit.pendingRecalculation=true; unit.state='待复核'; const seen=new Set(), groups=[unit.segments,...(unit.airflowBranches||[]).map(branch=>branch?.segments||[])]; groups.flat().forEach(seg=>{if(!seg||seen.has(seg))return;seen.add(seg);seg.confirmed=false;if(A.invalidate)A.invalidate(seg,'项目天气条件变化，待复核');}); } });
         }
-        const result = await store.save(candidateProjects);
-        projects.splice(0, projects.length, ...result.projects); selectedProject = editProjectIndex !== null ? editProjectIndex : projects.length - 1;
+        let result;
+        const pendingVersion = editProjectIndex !== null && candidateProjects[editProjectIndex]?.pendingVersionDraft ? candidateProjects[editProjectIndex] : null;
+        if (pendingVersion) {
+          const draft = { ...pendingVersion, ...candidateProjects[editProjectIndex] };
+          delete draft.pendingVersionDraft; delete draft.parentProjectId;
+          const created = await store.lifecycle.createVersion({ projectId: pendingVersion.parentProjectId, versionId: pendingVersion.parentVersionId, draft });
+          const latest = await store.lifecycle.list({ includeHistory: true });
+          state.revision = latest.revision; state.sharedKind = 'exists'; state.sharedProjects = JSON.parse(JSON.stringify(latest.data.projects || [])); state.projects = JSON.parse(JSON.stringify(latest.data.projects || [])); state.source = 'shared';
+          result = { ...latest, projects: latest.data.projects || [], createdProject: created.data.project };
+        } else result = await store.save(candidateProjects);
+          projects.splice(0, projects.length, ...result.projects); if (pendingVersion) centerSelectedVersion = null; selectedProject = pendingVersion ? projects.findIndex(item => item.versionId === result.createdProject?.versionId) : editProjectIndex !== null ? editProjectIndex : projects.length - 1;
         baseline = JSON.stringify(projects); projectFormDirty = false; newProjectMode = false; editProjectIndex = null; selectedUnit = 0; renderManager();
       } else {
         persistActiveUnit(); const result = await store.save(projects); projects.splice(0, projects.length, ...result.projects); baseline = JSON.stringify(projects);
@@ -344,17 +484,21 @@
     const source = projects[index]; if (!source) return;
     const copy = JSON.parse(JSON.stringify(source));
     copy.projectId = A.newId('project');
-    copy.units.forEach(unit => { unit.unitId = A.newId('unit'); unit.segments.forEach(segment => { segment.id = A.newId('segment'); A.invalidate(segment, '项目复制，结果需要重新选型'); segment.confirmed = false; }); });
-    copy.name = `${source.name}（副本）`; copy.code = `${source.code}-COPY-${String(Date.now()).slice(-4)}`;
-    copy.state = '草稿'; copy.phase = '方案设计';
-    projects.splice(index + 1, 0, copy); selectedProject = index + 1; selectedUnit = 0; renderManager();
-    notice('项目已复制为未保存草稿，请点击保存按钮写入共享存储。'); refreshStoreNotice();
+    copy.lineageId = source.lineageId || source.projectId || source.code; copy.versionId = window.AHUPrototypeProjectVersion.makeId('version');
+    copy.parentVersionId = source.versionId || source.projectId || null; copy.isFrozen = false; delete copy.modifiedAt;
+    copy.name = `${source.name}（新版本）`; copy.state = '草稿'; copy.phase = '方案设计';
+    projects.splice(index + 1, 0, copy); selectedProject = index + 1; selectedUnit = 0; editProjectIndex = selectedProject; newProjectMode = true; renderManager();
+    notice('请输入新版本项目名称并核对资料，保存前取消不会改变历史项目。'); refreshStoreNotice();
   }
-  function deleteProject(index) {
+  async function deleteProject(index) {
     if (newProjectMode) { notice('当前项目资料正在编辑，请先保存。', true); return; }
-    const project = projects[index]; if (!project || !window.confirm(`删除项目“${project.name}”？当前原型会在下一次保存时从共享列表移除。`)) return;
-    projects.splice(index, 1); selectedProject = Math.max(0, Math.min(selectedProject, projects.length - 1)); selectedUnit = 0; renderManager();
-    notice('项目已从当前草稿列表删除，请点击保存按钮写入共享存储。'); refreshStoreNotice();
+    const project = projects[index]; if (!project || !window.confirm(`将项目“${project.name}”及其历史和导出文件移入回收站？`)) return;
+    try {
+      await store.lifecycle.trash({ projectId: project.projectId || project.code });
+      const current = await store.lifecycle.list({ includeTrash: false, includeHistory: false });
+      projects.splice(0, projects.length, ...(current.data.projects || [])); selectedProject = Math.max(0, Math.min(index, projects.length - 1)); selectedUnit = 0; renderManager();
+      notice('项目已移入回收站，三年内可恢复。'); refreshStoreNotice();
+    } catch (error) { notice(`移入回收站失败：${error.message}`, true); }
   }
   function renameProject(index) {
     const project = projects[index]; if (!project) return;
@@ -540,7 +684,7 @@
     const airflowForm = airflowForms.find(([id]) => id === unit.airflowForm) || null;
     const airflowFormMarkup = `<section class="unit-visual-panel airflow-form-panel" aria-label="气流形式选择"><div class="unit-visual-head"><div><b>气流形式</b><small>方案选项 · 保存到当前机组</small></div><span class="visual-badge">${airflowForm ? airflowForm[0] + ' · 待复核' : '待选择'}</span></div><div class="airflow-form-options" role="radiogroup" aria-label="选择气流形式">${airflowForms.map(([id,title,hint]) => `<label class="airflow-form-option ${unit.airflowForm === id ? 'selected' : ''}"><input type="radio" name="unitAirflowForm" value="${id}" data-airflow-form ${unit.airflowForm === id ? 'checked' : ''} ${formalReadonly?'disabled':''}><span class="airflow-form-code">${id}</span><span class="airflow-form-copy"><b>${title}</b><small>${hint}</small></span></label>`).join('')}</div><p class="airflow-form-note">${airflowForm ? `${airflowForm[0]} 已录入当前机组；` : ''}双气路拓扑、各路风量与实际结构尚未接入专业校核，选择后需工程复核。</p></section>`;
     const selection=unit.cabinetSelection,sectionLabel=selection?.status==='invalidated'||selection?.confirmed===false?'截面待重新确认':selection?.source==='manual'?'手工非标':selection?.source==='WK-无框架式盘管有效迎风尺寸候选'?'WK 盘管迎风候选':'未选择 / 手工输入待确认', weather=weatherSnapshot(unit), series=unit.cabinetSeries||'25W', install=unit.installationLocation||'室内';
-    const identityCard=`<section class="overview-card unit-identity-card"><h3>机组基本信息</h3><div class="overview-fields"><label>设备编号<input class="field-editable" data-unit-identity="no" value="${escapeHtml(unit.no||'')}" ${formalReadonly?'disabled':''}></label><label>方案编号<input class="field-editable" data-unit-identity="schemeNo" value="${escapeHtml(unit.schemeNo||'')}" ${formalReadonly?'disabled':''}></label><label>机组型号（可选）<input class="field-editable" data-unit-identity="model" value="${escapeHtml(unit.model||'')}" ${formalReadonly?'disabled':''}></label><label>数量<input class="field-editable" type="number" min="1" step="1" data-unit-identity="quantity" value="${escapeHtml(unit.quantity??1)}" ${formalReadonly?'disabled':''}></label></div><small id="unitIdentityNotice" class="inline-error" role="status"></small></section>`;
+    const identityCard=(()=>{const legacyFlagSuffix=String(unit.no||'').match(/-(TE|ET|T-E)$/i)?.[1]?.toUpperCase()||'',nonstandardFlag=unit.nonstandardFlag!==undefined?unit.nonstandardFlag===true:unit.nonstandardConfiguration!==undefined?unit.nonstandardConfiguration===true:legacyFlagSuffix.includes('T'),parameterAdjustmentFlag=unit.parameterAdjustmentFlag!==undefined?unit.parameterAdjustmentFlag===true:unit.parameterAdjustment!==undefined?unit.parameterAdjustment===true:legacyFlagSuffix.includes('E');return `<section class="overview-card unit-identity-card"><h3>机组基本信息</h3><div class="overview-fields"><label>机组编号<input class="field-editable" data-unit-identity="no" value="${escapeHtml(unit.no||'')}" ${!pendingNewUnit?'readonly title="已有机组编号沿用；新机组从未使用流水号顺延"':''} ${formalReadonly?'disabled':''}></label><label>客户机组编号（可选）<input class="field-editable" data-unit-identity="customerUnitNo" value="${escapeHtml(unit.customerUnitNo||unit.profile?.customerUnitNo||'')}" ${formalReadonly?'disabled':''}></label><label>机组名称（可选）<input class="field-editable" data-unit-identity="name" value="${escapeHtml(unit.name||'')}" ${formalReadonly?'disabled':''}></label><label>产品类型<select class="field-editable" data-unit-identity="productType" ${formalReadonly?'disabled':''}>${['组合式空调','新风处理','热回收新风'].map(type=>`<option value="${type}" ${(unit.productType||unit.profile?.unitType||'组合式空调')===type?'selected':''}>${type}</option>`).join('')}</select></label><label>机组型号（可选）<input class="field-editable" data-unit-identity="model" value="${escapeHtml(unit.model||'')}" ${formalReadonly?'disabled':''}></label><label>数量<input class="field-editable" type="number" min="1" step="1" data-unit-identity="quantity" value="${escapeHtml(unit.quantity??1)}" ${formalReadonly?'disabled':''}></label><label class="unit-flag"><input type="checkbox" data-unit-identity="nonstandardFlag" ${nonstandardFlag?'checked':''} ${formalReadonly?'disabled':''}>T · 非标准配置，人工评估核价</label><label class="unit-flag"><input type="checkbox" data-unit-identity="parameterAdjustmentFlag" ${parameterAdjustmentFlag?'checked':''} ${formalReadonly?'disabled':''}>E · 参数调整标记</label></div><small id="unitIdentityNotice" class="inline-error" role="status"></small></section>`;})();
   const cabinetCard = `<section class="overview-card" data-unit-meta-panel><h3>箱体与安装</h3><div class="overview-fields"><label>箱体结构<select data-unit-meta="cabinetSeries" ${formalReadonly?'disabled':''}><option value="25W" ${series==='25W'?'selected':''}>25W</option><option value="50W" ${series==='50W'?'selected':''}>50W</option></select></label><label>安装位置<select data-unit-meta="installationLocation" ${formalReadonly?'disabled':''}><option ${install==='室内'?'selected':''}>室内</option><option ${install==='室外'?'selected':''}>室外</option></select></label></div></section>`;
     const weatherCard = `<section class="overview-card weather-card"><h3>室外工况</h3><div class="overview-fields"><label class="field-wide">项目使用地<span class="field-readonly">${escapeHtml(weather.place)}</span></label><label>冬季干球 ℃<input class="field-editable" data-weather-override="winterAirConditioningTemperature" type="number" step="0.1" value="${escapeHtml(weather.winterDry)}" placeholder="待填" ${formalReadonly?'disabled':''}></label><label>冬季 RH %<input class="field-editable" data-weather-override="winterAirConditioningRH" type="number" step="1" value="${escapeHtml(weather.winterRh)}" placeholder="待填" ${formalReadonly?'disabled':''}></label><label>夏季干球 ℃<input class="field-editable" data-weather-override="summerAirConditioningDryBulb" type="number" step="0.1" value="${escapeHtml(weather.summerDry)}" placeholder="待填" ${formalReadonly?'disabled':''}></label><label>夏季湿球 ℃<input class="field-editable" data-weather-override="summerAirConditioningWetBulb" type="number" step="0.1" value="${escapeHtml(weather.summerWet)}" placeholder="待填" ${formalReadonly?'disabled':''}></label></div><p class="muted">冬季：干球 / RH；夏季：干球 / 湿球。机组手动调整仅覆盖当前机组。</p></section>`;
     const dimensionText = width !== '' && height !== '' ? `${escapeHtml(width)} × ${escapeHtml(height)} mm` : '未确认';
@@ -607,6 +751,7 @@ ${pendingNewUnit?'<button type="button" class="btn light" data-cancel-new-unit>�
     return;
     } persistActiveUnit();
      overviewHost.querySelectorAll('[aria-invalid="true"]').forEach(node=>node.removeAttribute('aria-invalid'));
+     overviewHost.querySelectorAll('[data-unit-identity]').forEach(node=>{unit[node.dataset.unitIdentity]=node.type==='checkbox'?node.checked:node.value;});
      const before=JSON.stringify(projects), input=collectUnitInfoValidationInput(unit);
      const identityResult=typeof validateUnitIdentityInput==='function'?validateUnitIdentityInput(unit,overviewHost):{valid:true,errors:[]}; if(!identityResult.valid){const identityNotice=$('unitIdentityNotice')||noticeBox; showUnitInfoValidation(identityResult,overviewHost,identityNotice); return;}
      const result=window.AHUPrototypeUnitInfoValidator.validate(input);
@@ -618,7 +763,7 @@ ${pendingNewUnit?'<button type="button" class="btn light" data-cancel-new-unit>�
      document.body.inert=true;
      try { const candidate=JSON.parse(before), target=candidate.projects?.[selectedProject]?.units?.[selectedUnit] || candidate[selectedProject]?.units?.[selectedUnit];
      if(target){ target.designConditions ||= {};
-     const identityNodes=overviewHost.querySelectorAll('[data-unit-identity]'), identity={}; identityNodes.forEach(node=>identity[node.dataset.unitIdentity]=node.value); if(identityNodes.length||pendingNewUnit){const no=String(identity.no||'').trim(),schemeNo=String(identity.schemeNo||'').trim(); if(!no||!schemeNo||!/^\d+$/.test(identity.quantity||'')||Number(identity.quantity)<1){throw new Error('设备编号、方案编号和数量必须有效');} if(projects[selectedProject].units.some(existing=>existing.unitId!==unit.unitId&&String(existing.no||'').trim().toUpperCase()===no.toUpperCase()))throw new Error('设备编号已存在，请修改后再确认。'); target.no=no; target.schemeNo=schemeNo; target.model=identity.model?.trim()||''; target.quantity=Number(identity.quantity);}
+     const identityNodes=overviewHost.querySelectorAll('[data-unit-identity]'), identity={}; identityNodes.forEach(node=>identity[node.dataset.unitIdentity]=node.type==='checkbox'?node.checked:node.value); if(identityNodes.length||pendingNewUnit){let no=String(identity.no||'').trim(),productType=String(identity.productType||'组合式空调'); if(!no||!/^[0-9]+$/.test(identity.quantity||'')||Number(identity.quantity)<1){throw new Error('机组编号和数量必须有效');} if(pendingNewUnit&&!window.AHUPrototypeProjectVersion?.inferSequenceNo(no))throw new Error('机组编号须包含唯一的三位流水号'); if(!['组合式空调','新风处理','热回收新风'].includes(productType))throw new Error('产品类型必须从已确认的三类中选择'); target.nonstandardFlag=identity.nonstandardFlag===true; target.parameterAdjustmentFlag=identity.parameterAdjustmentFlag===true; const flags=`${target.nonstandardFlag?'T':''}${target.parameterAdjustmentFlag?'E':''}`,oldFlags=`${unit.nonstandardFlag===true?'T':''}${unit.parameterAdjustmentFlag===true?'E':''}`,legacyFlagSuffix=String(unit.no||'').match(/-(TE|ET|T-E)$/i)?.[1]?.toUpperCase()||''; let bareNo=no; if(oldFlags)bareNo=bareNo.replace(new RegExp(`-${oldFlags}$`,'i'),''); else if(legacyFlagSuffix)bareNo=bareNo.replace(/-(?:TE|ET|T-E)$/i,''); no=bareNo+(flags?`-${flags}`:''); if(projects[selectedProject].units.some(existing=>existing.unitId!==unit.unitId&&String(existing.no||'').trim().toUpperCase()===no.toUpperCase()))throw new Error('机组编号已被占用，请由技术支持确认未使用的新编号。'); target.no=no; target.sequenceNo=window.AHUPrototypeProjectVersion?.inferSequenceNo(no)||target.sequenceNo; target.customerUnitNo=String(identity.customerUnitNo||'').trim(); target.name=String(identity.name||'').trim(); target.productType=productType; target.profile={...(target.profile||{}),customerUnitNo:target.customerUnitNo,unitType:productType}; target.schemeNo=pendingNewUnit?no:(String(unit.schemeNo||'').trim()||no); target.model=identity.model?.trim()||''; target.quantity=Number(identity.quantity);}
      ['freshAirVolume','airVolume','externalPressure','returnAirVolume','exhaustAirVolume','exhaustExternalPressure'].forEach(key=>{if(input[key]!==undefined&&input[key]!=='')target.designConditions[key]={...(target.designConditions[key]||{}),value:Number(input[key])};});
      target.cabinetSeries=input.cabinetSeries;
      target.installationLocation=unit.installationLocation||'室内';
@@ -829,6 +974,25 @@ ${pendingNewUnit?'<button type="button" class="btn light" data-cancel-new-unit>�
   function onConfirmSegmentFields(event) { if (formalReadonly || projectSaveBusy) { event.preventDefault(); event.stopImmediatePropagation(); return false; } const active=segments.find(item=>item.id===selectedId), fieldsApi=window.AHUPrototypeSegmentFields, checker=fieldsApi?.validateManualField; if (!active||!checker||fieldsApi.typeOf(active)==='unknown') { event.preventDefault(); event.stopImmediatePropagation(); notice('当前功能段类型未接入，无法确认。',true); return false; } for (const node of $('inputGrid').querySelectorAll('[data-segment-manual]')) { const result=checker(active,node.dataset.segmentManual,node.value); if (!result.valid) { node.setAttribute('aria-invalid','true'); node.focus(); notice(result.message||'输入无效',true); event.preventDefault(); event.stopImmediatePropagation(); return false; } } return true; }
   window.onConfirmSegmentFields=onConfirmSegmentFields;
   $('confirmSegment').addEventListener('click', onConfirmSegmentFields, true);
+  function commitConfirmedSegment(event) {
+    const confirmedSegment = segments.find(item => item.id === selectedId);
+    setTimeout(async () => {
+      if (event.defaultPrevented || !confirmedSegment?.confirmed || formalReadonly || newProjectMode || pendingNewUnit || projectSaveBusy) return;
+      persistActiveUnit();
+      const activeUnit = projects[selectedProject]?.units?.[selectedUnit];
+      const allConfirmedSegments = [activeUnit?.segments || [], ...(activeUnit?.airflowBranches || []).map(branch => branch?.segments || [])].flat();
+      if (activeUnit && allConfirmedSegments.length && activeUnit.cabinetSelection?.confirmed === true && allConfirmedSegments.every(segment => segment?.confirmed === true && segment?.status !== 'invalidated')) activeUnit.pendingRecalculation = false;
+      if (JSON.stringify(projects) === baseline) return;
+      projectSaveBusy = true;
+      try {
+        const result = await store.save(projects);
+        projects.splice(0, projects.length, ...result.projects); baseline = JSON.stringify(projects);
+        loadPrototypeUnit(selectedUnit); renderAll(); refreshStoreNotice(); notice('当前功能段确认已保存到共享项目。');
+      } catch (error) { notice(`功能段已确认，保存失败；当前输入仍保留，可重试保存：${error.message}`, true); }
+      finally { projectSaveBusy = false; }
+    }, 0);
+  }
+  $('confirmSegment').addEventListener('click', commitConfirmedSegment);
   $('inputGrid').addEventListener('input', updateProfessionalInput, true);
   $('inputGrid').addEventListener('change', updateProfessionalInput, true);
   $('confirmSegment').addEventListener('click', event => { if (formalReadonly || projectSaveBusy) { event.preventDefault(); event.stopImmediatePropagation(); return; } const active=segments.find(item=>item.id===selectedId), checker=window.AHUPrototypeSegmentFields?.validateManualField; if (!active||!checker) return; for (const node of $('inputGrid').querySelectorAll('[data-segment-manual]')) { const result=checker(active,node.dataset.segmentManual,node.value); if (!result.valid) { node.setAttribute('aria-invalid','true'); node.setCustomValidity?.(result.message||'输入无效'); node.focus(); notice(result.message||'输入无效',true); event.preventDefault(); event.stopImmediatePropagation(); return; } } }, true);
