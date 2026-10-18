@@ -31,6 +31,8 @@
 .pcv-project-heading h2{margin:0;color:#25434d;font-size:19px}
 .pcv-project-heading small{color:#6d8288;font-size:11px}
 .pcv-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+.pcv-actions .pcv-new-unit-primary{font-weight:700;color:#fff;background:#087f8c;border-color:#087f8c;box-shadow:0 2px 7px rgba(8,127,140,.22)}
+.pcv-actions .pcv-new-unit-primary:hover{background:#066b76;border-color:#066b76}
 .pcv-detail-scroll{min-height:0;flex:1;overflow:auto;padding:12px 16px 18px;overscroll-behavior:contain}
 .pcv-section{margin:0 0 12px;padding:11px 12px;border:1px solid #dce6e8;background:#fff}
 .pcv-section h3{margin:0 0 9px;color:#35545e;font-size:13px}

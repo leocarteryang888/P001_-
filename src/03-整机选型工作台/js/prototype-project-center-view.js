@@ -241,6 +241,7 @@
         if (previousExport(project)) actions.append(button('对比上一导出', 'compare'));
       } else if (isActive) {
         if (isEditable) actions.append(button('编辑项目资料', 'edit'));
+        if (isEditable) actions.append(button('＋ 新建机组', 'new-unit', 'pcv-button pcv-new-unit-primary'));
         actions.append(button('创建新版本', 'create-version'));
         if (isEditable) actions.append(button('导出 / 下发', 'export'));
         else if (exportFor(project)?.exportId) actions.append(button('下载此版本', 'download'));
@@ -411,7 +412,17 @@
       const card = control.closest('.pcv-project-card');
       const project = card ? (includeTrash ? records.trash.find(row => (row.project.projectId || lineageOf(row.project)) === card.dataset.projectId)?.project : records.projects.find(item => lineageOf(item) === card.dataset.lineageId) || records.history.map(projectOf).find(item => lineageOf(item) === card.dataset.lineageId)) : fromContextMenu ? records.projects.find(item => lineageOf(item) === contextLineageId) : selectedProject();
       if (action === 'new-project') { await options.onNewProject?.(); return; }
-      if ((action === 'select-current' || action === 'select-trash') && project) { selected = { lineageId: lineageOf(project), versionId: versionOf(project) }; await options.onSelectVersion?.({ projectId: project.projectId, versionId: project.versionId, project }); render(); return; }
+      if ((action === 'select-current' || action === 'select-trash') && project) {
+        selected = { lineageId: lineageOf(project), versionId: versionOf(project) };
+        for (const cardNode of Array.from(list.children || [])) {
+          const isSelected = cardNode.dataset?.lineageId === selected.lineageId && !includeTrash;
+          cardNode.className = cardNode.className.replace(/\sselected\b/g, '').replace(/^selected\b/, '').trim();
+          if (isSelected) cardNode.className = `${cardNode.className} selected`.trim();
+        }
+        drawDetail(project);
+        await options.onSelectVersion?.({ projectId: project.projectId, versionId: project.versionId, project });
+        return;
+      }
       if (action === 'select-version' && card) {
         const trashVersions = includeTrash ? records.trash.flatMap(row => archivedVersionsOf(row)) : [];
         const version = records.history.map(projectOf).concat(records.projects, trashVersions).find(item => lineageOf(item) === card.dataset.lineageId && versionOf(item) === control.dataset.versionId);
@@ -425,6 +436,23 @@
       }
       const unit = control.dataset.unitIndex !== undefined ? project?.units?.[Number(control.dataset.unitIndex)] : null;
       await invoke(action, project, unit);
+    }
+    async function onDoubleClick(event) {
+      if (includeTrash || busy) return;
+      const control = event.target.closest('[data-action="select-current"]');
+      if (!control || !sidebar.contains(control)) return;
+      const card = control.closest('.pcv-project-card');
+      const project = card && records.projects.find(item => lineageOf(item) === card.dataset.lineageId);
+      if (!project || project.isFrozen || !records.projects.some(item => item.projectId === project.projectId)) return;
+      selected = { lineageId: lineageOf(project), versionId: versionOf(project) };
+      for (const cardNode of Array.from(list.children || [])) {
+        const isSelected = cardNode.dataset?.lineageId === selected.lineageId;
+        cardNode.className = cardNode.className.replace(/\sselected\b/g, '').replace(/^selected\b/, '').trim();
+        if (isSelected) cardNode.className = `${cardNode.className} selected`.trim();
+      }
+      drawDetail(project);
+      await options.onSelectVersion?.({ projectId: project.projectId, versionId: project.versionId, project });
+      await invoke('edit', project);
     }
     function onContextMenu(event) {
       const card = event.target.closest('.pcv-project-card'); if (!card || !sidebar.contains(card) || includeTrash) return;
@@ -446,7 +474,7 @@
     const onSearch = () => render();
     const onHistory = async () => { includeHistory = historyCheck.checked; try { await refresh(); } catch (error) { setMessage(`列表读取失败：${error.message}`, true); } };
     const onTrashToggle = async () => { includeTrash = trashCheck.checked; includeHistory = false; historyCheck.checked = false; try { await refresh(); } catch (error) { setMessage(`回收站读取失败：${error.message}`, true); } };
-    sidebar.addEventListener('click', onClick); detail.addEventListener('click', onClick); sidebar.addEventListener('contextmenu', onContextMenu);
+    sidebar.addEventListener('click', onClick); sidebar.addEventListener('dblclick', onDoubleClick); detail.addEventListener('click', onClick); sidebar.addEventListener('contextmenu', onContextMenu);
     doc.addEventListener?.('click', onDocumentClick);
     search.addEventListener('input', onSearch); historyCheck.addEventListener('change', onHistory); trashCheck.addEventListener('change', onTrashToggle);
     function selectVersion(project) {
@@ -457,7 +485,7 @@
     }
     const controller = { refresh, render, selectVersion, getState: () => ({ records, selected, includeHistory, includeTrash, message, busy }), destroy() {
       if (destroyed) return;
-      destroyed = true; sidebar.removeEventListener('click', onClick); detail.removeEventListener('click', onClick); sidebar.removeEventListener('contextmenu', onContextMenu); dismissContextMenu();
+      destroyed = true; sidebar.removeEventListener('click', onClick); sidebar.removeEventListener('dblclick', onDoubleClick); detail.removeEventListener('click', onClick); sidebar.removeEventListener('contextmenu', onContextMenu); dismissContextMenu();
       doc.removeEventListener?.('click', onDocumentClick);
       search.removeEventListener('input', onSearch); historyCheck.removeEventListener('change', onHistory); trashCheck.removeEventListener('change', onTrashToggle);
       sidebar.replaceChildren?.(...previousSidebarNodes); detail.replaceChildren?.(...previousDetailNodes);

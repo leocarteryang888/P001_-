@@ -151,6 +151,20 @@
   };
   function destroyProjectCenter() { projectCenterView?.destroy?.(); projectCenterView = null; }
   async function refreshProjectCenter() { if (projectCenterView) { try { await projectCenterView.refresh(); } catch (error) { notice(`项目中心刷新失败：${error.message}`, true); } } }
+  function updateProjectCenterHeader(project, readOnlySnapshot = false) {
+    $('projectName').classList.remove('new-project-title');
+    document.querySelector('.manager-head .project-summary').hidden = false;
+    if ($('addProject')) $('addProject').hidden = false;
+    document.querySelector('.app')?.classList.remove('editor-mode');
+    $('partsLibraryBtn').hidden = false; $('projectEditorMax').hidden = false; $('projectEditorMin').hidden = false;
+    document.querySelector('.project-title-block')?.appendChild($('saveBtn'));
+    $('crumb').textContent = '项目中心'; document.querySelector('.unit-area').hidden = false;
+    $('saveBtn').hidden = readOnlySnapshot || Boolean(project?.isFrozen); $('saveBtn').disabled = readOnlySnapshot || Boolean(project?.isFrozen);
+    $('projectName').textContent = project?.name || '项目中心';
+    $('projectSubtitle').textContent = project ? (project.isFrozen ? '已导出冻结版本 · 只读存档' : '项目及机组资料') : '创建项目后可添加机组';
+    $('metricCode').textContent = project?.name || '—'; $('metricUnits').textContent = project?.salesCompany || project?.salesCompanyCode || '—';
+    $('metricPhase').textContent = project?.code || '—'; $('metricState').textContent = project?.businessOwner || '—';
+  }
   function mountProjectCenter() {
     if (projectCenterView || !window.AHUPrototypeProjectCenterView?.mount) return projectCenterView;
     const centerLifecycle = { ...store.lifecycle };
@@ -188,7 +202,7 @@
         setTimeout(() => document.querySelectorAll('.project-form input,.project-form select,.project-form button').forEach(node => { node.disabled = false; }), 0);
         notice('请核对并修改新版本资料；保存确认后才写入版本。取消不会改变原版或历史记录。'); return { data: { project: draft, pending: true } };
       },
-      onSelectVersion: ({ projectId, project }) => { const index = projects.findIndex(item => item.projectId === projectId); if (index >= 0) { selectedProject = index; selectedUnit = 0; centerSelectedVersion = project?.isFrozen ? project : null; } else centerSelectedVersion = project || null; renderManager(); if (centerSelectedVersion?.isFrozen) notice('当前为已导出的只读历史快照。'); },
+      onSelectVersion: ({ projectId, project }) => { const index = projects.findIndex(item => item.projectId === projectId); if (index >= 0) { selectedProject = index; selectedUnit = 0; centerSelectedVersion = project?.isFrozen ? project : null; } else centerSelectedVersion = project || null; updateProjectCenterHeader(centerSelectedVersion || projects[selectedProject], Boolean(centerSelectedVersion)); if (centerSelectedVersion?.isFrozen) notice('当前为已导出的只读历史快照。'); },
       onOpenUnit: (project, unit) => { const pi = projects.findIndex(item => item.projectId === project.projectId), ui = project.units?.findIndex(item => item.unitId === unit.unitId); if (pi >= 0 && ui >= 0) { selectedProject = pi; selectedUnit = ui; showWorkspace(ui); } },
       onNewUnit: project => { const pi = projects.findIndex(item => item.projectId === project.projectId); if (pi >= 0) { selectedProject = pi; selectedUnit = 0; window.addPrototypeUnit?.(); } },
       onExport: async project => {
@@ -343,13 +357,8 @@
     else {
       mountProjectCenter();
       if (projectCenterView) {
-        $('projectName').classList.remove('new-project-title'); document.querySelector('.manager-head .project-summary').hidden = false; if ($('addProject')) $('addProject').hidden = false;
-        document.querySelector('.app')?.classList.remove('editor-mode'); $('partsLibraryBtn').hidden = false; $('projectEditorMax').hidden = false; $('projectEditorMin').hidden = false;
-        document.querySelector('.project-title-block')?.appendChild($('saveBtn')); $('crumb').textContent = '项目中心'; document.querySelector('.unit-area').hidden = false;
         const p = centerSelectedVersion || projects[selectedProject];
-        $('saveBtn').hidden = Boolean(centerSelectedVersion); $('saveBtn').disabled = Boolean(centerSelectedVersion);
-        $('projectName').textContent = p?.name || '项目中心'; $('projectSubtitle').textContent = p ? (p.isFrozen ? '已导出冻结版本 · 只读存档' : '项目及机组资料') : '创建项目后可添加机组';
-        $('metricCode').textContent = p?.name || '—'; $('metricUnits').textContent = p?.salesCompany || p?.salesCompanyCode || '—'; $('metricPhase').textContent = p?.code || '—'; $('metricState').textContent = p?.businessOwner || '—';
+        updateProjectCenterHeader(centerSelectedVersion || p, Boolean(centerSelectedVersion));
         refreshProjectCenter(); return;
       }
     }

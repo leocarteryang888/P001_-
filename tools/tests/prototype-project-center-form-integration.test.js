@@ -95,6 +95,8 @@ window.AHUPrototypeProjectVersion = {
   nextEquipmentNumber: () => ({ no: '002', sequenceNo: '002' })
 };
 window.AHUPrototypeProjectStore = {
+  captureUnitSegments(projects, projectIndex, unitIndex, segments) { if (!projects[projectIndex]?.units?.[unitIndex]) return false; projects[projectIndex].units[unitIndex].segments = clone(segments); return true; },
+  restoreUnitSegments(projects, projectIndex, unitIndex) { return clone(projects[projectIndex]?.units?.[unitIndex]?.segments || []); },
   createStore() {
     const store = {
       state: { revision, sharedKind: 'exists', source: 'shared', sharedProjects: clone(persisted), projects: clone(persisted) },
@@ -118,9 +120,12 @@ window.renderManager = () => {};
 window.renderAll = () => {};
 window.renderInputs = () => {};
 window.renderOutputs = () => {};
-window.showManager = () => window.renderManager?.();
 let openedUnit = null;
-window.showWorkspace = index => { openedUnit = index; };
+window.showManager = () => { document.querySelector('.manager').hidden = false; document.querySelector('#workspace').hidden = true; window.renderManager?.(); };
+window.showWorkspace = index => {
+  openedUnit = index; document.querySelector('.manager').hidden = true; document.querySelector('#workspace').hidden = false;
+  document.querySelectorAll('.stage').forEach(stage => stage.classList.toggle('active', stage.dataset.stage === '机组资料'));
+};
 window.loadPrototypeUnit = () => {};
 window.renderProjectForm = () => {};
 window.notice = () => {};
@@ -151,7 +156,7 @@ function fillProjectForm(name) {
 
 (async () => {
   // Parse the actual formal HTML first and release the source's DOMContentLoaded gate.
-  const instrumentedSource = uiSource.replace(/  showManager\(\);\s*\}\)\(\);\s*$/, '  window.__getProjectUiState = () => ({ projectSaveBusy, newProjectMode, editProjectIndex, selectedProject, centerSelectedVersion, activeProject: projects[selectedProject], centerBusy: projectCenterView?.getState?.().busy });\n  showManager();\n})();');
+  const instrumentedSource = uiSource.replace(/  showManager\(\);\s*\}\)\(\);\s*$/, '  window.__getProjectUiState = () => ({ projectSaveBusy, newProjectMode, editProjectIndex, selectedProject, centerSelectedVersion, activeProject: projects[selectedProject], pendingNewUnit, centerBusy: projectCenterView?.getState?.().busy });\n  showManager();\n})();');
   assert.notEqual(instrumentedSource, uiSource, 'test-only state observer is injected at the source IIFE boundary');
   await window.eval(instrumentedSource);
   await waitFor(() => document.querySelector('.pcv-project-card'), 'initial project-center mount');
@@ -187,8 +192,12 @@ function fillProjectForm(name) {
   historyToggle.dispatchEvent(new window.Event('change', { bubbles: true })); await waitFor(() => document.querySelector('[data-version-id="version-old"]'), 'history list');
   click(document.querySelector('[data-version-id="version-old"]'));
   await waitFor(() => document.querySelector('#projectName').textContent === '历史项目名', 'history context in actual manager heading');
+  document.querySelector('[data-version-id="version-old"]').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window }));
+  await tick();
+  assert.equal(document.querySelector('.project-form'), null, 'double-clicking a historical version cannot enter the editor');
   assert.ok(document.querySelector('#saveBtn').hidden && document.querySelector('#saveBtn').disabled, 'history manager context cannot save the active project');
   assert.equal(document.querySelector('.pcv-detail [data-action="edit"]'), null, 'history view has no edit control');
+  assert.equal(document.querySelector('.pcv-detail .pcv-new-unit-primary'), null, 'history view cannot add a new unit');
   assert.equal(document.querySelector('.pcv-detail [data-action="open-unit"]'), null, 'history units cannot open for editing');
   click(document.querySelector('.pcv-detail [data-action="create-version"]'));
   assert.ok(document.querySelector('.project-form'), 'create-version action from history enters actual form');
@@ -230,6 +239,43 @@ function fillProjectForm(name) {
   await waitFor(() => !window.__getProjectUiState().projectSaveBusy && !window.__getProjectUiState().newProjectMode && persisted.length === 2, 'new-project save retry returns to center');
   assert.equal(persisted.filter(project => project.name === '重试新项目').length, 1, 'retry creates one project only');
 
+  // A normal selection preserves its source node so the browser's subsequent double-click reaches the same card.
+  const editTargetCard = [...document.querySelectorAll('.pcv-project-card')].find(card => card.textContent.includes('重试新项目'));
+  const editTargetControl = editTargetCard.querySelector('[data-action="select-current"]');
+  const originalEdit = window.editPrototypeProject; const editCalls = [];
+  window.editPrototypeProject = index => { editCalls.push(window.projects[index]?.projectId); return originalEdit(index); };
+  click(editTargetControl);
+  await waitFor(() => window.__getProjectUiState().activeProject?.name === '重试新项目', 'single-click updates the selected project');
+  assert.equal([...document.querySelectorAll('.pcv-project-card')].find(card => card.textContent.includes('重试新项目'))?.querySelector('[data-action="select-current"]'), editTargetControl, 'first click preserves the actual target node');
+  assert.equal(document.querySelector('.project-form'), null, 'single click only selects the project');
+  click(editTargetControl);
+  await waitFor(() => window.__getProjectUiState().activeProject?.name === '重试新项目', 'second click keeps the same project selected');
+  assert.equal([...document.querySelectorAll('.pcv-project-card')].find(card => card.textContent.includes('重试新项目'))?.querySelector('[data-action="select-current"]'), editTargetControl, 'second click also preserves the actual target node');
+  editTargetControl.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window }));
+  await waitFor(() => document.querySelector('.project-form'), 'double-click enters the actual project editor');
+  assert.equal(document.querySelector('#prototypeProjectName').value, '重试新项目', 'double-click edits the exact project under the clicked card');
+  assert.deepEqual(editCalls, [window.__getProjectUiState().activeProject.projectId], 'one double-click dispatches exactly one edit for the selected project');
+  click(document.querySelector('#cancelProjectForm'));
+  await waitFor(() => !window.__getProjectUiState().newProjectMode && document.querySelector('.pcv-project-card'), 'center after double-click edit cancellation');
+
+  // The prominent action reuses the existing pending-unit workflow without persisting a project revision.
+  const mainCardForNewUnit = [...document.querySelectorAll('.pcv-project-card')].find(card => card.dataset.lineageId === 'line-main');
+  click(mainCardForNewUnit.querySelector('[data-action="select-current"]'));
+  await waitFor(() => window.__getProjectUiState().activeProject?.lineageId === 'line-main', 'select main project before new-unit action');
+  const persistedMain = persisted.find(project => project.lineageId === 'line-main');
+  const persistedUnitCount = persistedMain.units.length;
+  const selectedProjectIdForUnit = window.__getProjectUiState().activeProject.projectId;
+  const newUnitButton = document.querySelector('.pcv-detail .pcv-new-unit-primary');
+  assert.ok(newUnitButton, 'selected active project exposes a prominent new-unit button in its heading');
+  click(newUnitButton);
+  await waitFor(() => window.__getProjectUiState().pendingNewUnit?.projectId === selectedProjectIdForUnit, 'new-unit action creates a pending draft for the selected project');
+  assert.equal(document.querySelector('#workspace').hidden, false, 'new-unit action enters the workspace');
+  assert.equal(document.querySelector('.stage.active')?.dataset.stage, '机组资料', 'new-unit action opens the unit information stage');
+  assert.equal(window.__getProjectUiState().activeProject.units.length, persistedUnitCount + 1, 'pending draft is present only in the workbench state');
+  assert.equal(persistedMain.units.length, persistedUnitCount, 'pending new-unit action does not persist to the shared store');
+  assert.equal(window.cancelPrototypeUnitCreation(), true, 'the pending draft remains cancellable through the existing flow');
+  await waitFor(() => !window.__getProjectUiState().pendingNewUnit && document.querySelector('.pcv-project-card'), 'center after cancelling pending unit draft');
+
   // Trash and restore the active lineage, then prove the restored snapshot drives both open and edit actions.
   const activeLineCard = [...document.querySelectorAll('.pcv-project-card')].find(card => card.dataset.lineageId === 'line-main');
   click(activeLineCard.querySelector('[data-action="select-current"]'));
@@ -240,8 +286,12 @@ function fillProjectForm(name) {
   trashToggle.dispatchEvent(new window.Event('change', { bubbles: true }));
   await waitFor(() => [...document.querySelectorAll('.pcv-project-card')].some(card => card.dataset.lineageId === 'line-main'), 'trashed lineage appears in the trash list');
   const trashedCard = [...document.querySelectorAll('.pcv-project-card')].find(card => card.dataset.lineageId === 'line-main');
+  trashedCard.querySelector('[data-action="select-trash"]').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window }));
+  await tick();
+  assert.equal(document.querySelector('.project-form'), null, 'double-clicking a trash record cannot enter the editor');
   click(trashedCard.querySelector('[data-action="select-trash"]'));
   await waitFor(() => document.querySelector('.pcv-detail [data-action="restore"]'), 'trash selection renders restore actions');
+  assert.ok(document.querySelector('#saveBtn').hidden && document.querySelector('#saveBtn').disabled, 'trash selection keeps the global project-save control read-only');
   click(document.querySelector('.pcv-detail [data-action="restore"]'));
   await waitFor(() => persisted.some(project => project.lineageId === 'line-main') && !trashed.some(row => row.project.lineageId === 'line-main') && window.projects.some(project => project.lineageId === 'line-main'), 'restore synchronizes the global workbench project list');
   trashToggle.checked = false; trashToggle.dispatchEvent(new window.Event('change', { bubbles: true }));
@@ -300,5 +350,5 @@ function fillProjectForm(name) {
   }
 
   window.close?.(); dom.window.close();
-  console.log('通过：正式 index DOM + 实际 UI bridge；新建/编辑/版本与回收站流程通过；真实 store adapter + 随机端口临时 server 已验证 lifecycle POST、保存后刷新卡片及详情。');
+  console.log('通过：正式 index DOM + 实际 UI bridge；项目列表双击编辑、顶部新建机组待确认流程、只读隔离、生命周期操作及真实 store adapter/临时 server 全部通过。');
 })().catch(error => { console.error(error); dom.window.close(); process.exitCode = 1; });

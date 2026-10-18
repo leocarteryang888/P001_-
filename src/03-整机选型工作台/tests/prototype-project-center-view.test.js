@@ -19,6 +19,7 @@ class Element {
   closest(selector) {
     for (let current = this; current; current = current.parentNode) {
       if (selector === '[data-action]' && current.dataset?.action) return current;
+      if (selector === '[data-action="select-current"]' && current.dataset?.action === 'select-current') return current;
       if (selector === '.pcv-project-card' && current.className?.split(/\s+/).includes('pcv-project-card')) return current;
     }
     return null;
@@ -133,6 +134,69 @@ assert.equal(inheritedRows[1].source, '继承气象台站', 'new units display i
   await assert.rejects(failureView.refresh(), /临时断连/);
   assert.match(failureSidebar.children[3].children[0].innerHTML, /医院扩建项目/, 'a later refresh failure preserves already loaded project records');
   failureView.destroy();
+
+  let selectedProjectId = null, editedProjectId = null, newUnitProjectId = null;
+  const interactionSidebar = new Element('aside', document), interactionDetail = new Element('div', document);
+  const frozenProject = { ...oldProject, projectId: 'frozen-project', lineageId: 'frozen-lineage', versionId: 'frozen-v1', isFrozen: true };
+  const interactionView = View.mount({ sidebar: interactionSidebar, detail: interactionDetail, weather,
+    lifecycle: { async list(options) { return { data: { projects: [currentProject, recentlyChanged, frozenProject], history: [{ project: oldProject }], trash: options?.includeTrash ? [{ project: currentProject, deletedAt: '2026-10-16T00:00:00Z', retentionUntil: '2029-10-16T00:00:00Z' }] : [] } }; } },
+    onSelectVersion: ({ project }) => { selectedProjectId = project.projectId; },
+    onEditProject: project => { editedProjectId = project.projectId; },
+    onNewUnit: project => { newUnitProjectId = project.projectId; }
+  });
+  await interactionView.refresh();
+  const targetCard = interactionSidebar.children[3].children.find(card => card.dataset.lineageId === 'line-2');
+  const targetControl = new Element('button', document); targetControl.dataset.action = 'select-current'; targetCard.append(targetControl);
+  const cardIdentity = targetCard;
+  interactionSidebar.dispatch('click', targetControl);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(interactionSidebar.children[3].children.find(card => card.dataset.lineageId === 'line-2'), cardIdentity, 'first click preserves the project card node needed for a real double-click');
+  assert.equal(selectedProjectId, 'p2', 'single click selects the exact project without editing');
+  assert.equal(editedProjectId, null, 'single click only selects the project');
+  interactionSidebar.dispatch('click', targetControl);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(interactionSidebar.children[3].children.find(card => card.dataset.lineageId === 'line-2'), cardIdentity, 'second click also preserves the same project card node');
+  interactionSidebar.dispatch('dblclick', targetControl);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(editedProjectId, 'p2', 'double-click edits the exact active project once');
+  const newUnitHeading = interactionDetail.children[0].children.find(node => node.className === 'pcv-project-heading').querySelector('.pcv-actions');
+  const topNewUnit = new Element('button', document); topNewUnit.dataset.action = 'new-unit'; newUnitHeading.append(topNewUnit);
+  interactionDetail.dispatch('click', topNewUnit);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(newUnitProjectId, 'p2', 'the prominent selected-project action targets the active project');
+  const frozenCard = interactionSidebar.children[3].children.find(card => card.dataset.lineageId === 'frozen-lineage');
+  const frozenControl = new Element('button', document); frozenControl.dataset.action = 'select-current'; frozenCard.append(frozenControl);
+  interactionSidebar.dispatch('dblclick', frozenControl);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(editedProjectId, 'p2', 'double-click cannot bypass frozen-project read-only behavior');
+  const historyToggleForInteraction = interactionSidebar.children[2].children[1].children[0];
+  historyToggleForInteraction.checked = true; historyToggleForInteraction.dispatch('change');
+  await new Promise(resolve => setImmediate(resolve));
+  const historicalButton = interactionSidebar.children[3].children[0].querySelectorAll('button').find(node => node.dataset.action === 'select-version');
+  interactionSidebar.dispatch('dblclick', historicalButton);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(editedProjectId, 'p2', 'double-clicking an archived version cannot bypass historical read-only behavior');
+  const trashToggleForInteraction = interactionSidebar.children[2].children[2].children[0];
+  trashToggleForInteraction.checked = true; trashToggleForInteraction.dispatch('change');
+  await new Promise(resolve => setImmediate(resolve));
+  const trashCard = interactionSidebar.children[3].children[0];
+  const trashControl = new Element('button', document); trashControl.dataset.action = 'select-trash'; trashCard.append(trashControl);
+  interactionSidebar.dispatch('dblclick', trashControl);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(editedProjectId, 'p2', 'double-clicking a trash record cannot bypass read-only behavior');
+  const editCountBeforeDestroy = editedProjectId;
+  interactionView.destroy();
+  const remounted = View.mount({ sidebar: interactionSidebar, detail: interactionDetail, weather,
+    lifecycle: { async list() { return { data: { projects: [currentProject], history: [], trash: [] } }; } },
+    onEditProject: project => { editedProjectId = `${editedProjectId},${project.projectId}`; }
+  });
+  await remounted.refresh();
+  const remountCard = interactionSidebar.children[3].children[0];
+  const remountControl = new Element('button', document); remountControl.dataset.action = 'select-current'; remountCard.append(remountControl);
+  interactionSidebar.dispatch('dblclick', remountControl);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(editedProjectId, `${editCountBeforeDestroy},p-new`, 'destroy/remount binds one double-click handler');
+  remounted.destroy();
 
   let currentCalls = 0, historicalSelection = null, trashCalls = 0;
   const sidebar2 = new Element('aside', document), detail2 = new Element('div', document);
